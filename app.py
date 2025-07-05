@@ -21,7 +21,7 @@ st.markdown("""
             color: #FB6500;
         }
         .stTextInput > div > div > input {
-            background-color: #ffffff10;
+            background-color: #0B2341;
             color: white;
         }
         .stButton button {
@@ -36,7 +36,7 @@ st.markdown("""
             color: white;
         }
         .stAlert {
-            background-color: #ffffff10;
+            background-color: #0B2341;
         }
     </style>
 """, unsafe_allow_html=True)
