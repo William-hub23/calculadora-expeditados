@@ -20,7 +20,7 @@ st.markdown(
 )
 
 # --- ENCABEZADO ---
-st.markdown("<h1 style='color:#FB6500;'>ALA Calculadora de Venta Viajes Expeditados</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='color:#FB6500;'>🚛 Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
 # --- ACCESO CON CONTRASEÑA BÁSICA ---
 if 'authenticated' not in st.session_state:
