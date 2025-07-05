@@ -2,115 +2,137 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from io import BytesIO
-import requests
 from datetime import datetime
-import pytz
+from io import BytesIO
 
-# Configuración inicial
-st.set_page_config(page_title="Calculadora de Venta de Viajes Expeditados", layout="centered")
-
-# Estilos
-st.markdown(
-    '''
-    <style>
-    .main {
-        background-color: #0B2341;
-        color: white;
-    }
-    .stTextInput > div > div > input {
-        color: white !important;
-    }
-    </style>
-    ''',
-    unsafe_allow_html=True
+# Configuración de la página
+st.set_page_config(
+    page_title="Calculadora de Venta de Viajes Expeditados",
+    page_icon="🚚",
+    layout="centered"
 )
 
-# Banner
-st.image("banner.png", use_column_width=True)
+# Banner de inicio
+st.markdown(
+    "<h1 style='color:#FB6500; background-color:#0B2341; padding:20px;'>"
+    "🚛 Calculadora de Venta de Viajes Expeditados</h1>",
+    unsafe_allow_html=True
+)
+st.image("banner.png", use_container_width=True)
 
-# Autenticación simple
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# Cargar archivo Excel
+df_cat = pd.read_excel("CAT_TAB.xlsx", sheet_name=None)
+ALA_TAB = df_cat['ALA_TAB']
+PEAK_TAB = df_cat['PEAK_TAB']
+VENTA_TAB = df_cat['VENTA_TAB']
 
-if not st.session_state.authenticated:
-    st.title("🔒 Acceso restringido")
-    user = st.text_input("Usuario")
-    pwd = st.text_input("Contraseña", type="password")
-    if st.button("Entrar"):
-        if user == "admin" and pwd == "admin":
-            st.session_state.authenticated = True
-        else:
-            st.error("Credenciales incorrectas")
-    st.stop()
+# Formato de moneda
+def formato_moneda(valor, moneda):
+    simbolo = "$"
+    if moneda == "USD":
+        return f"{simbolo}{valor:,.2f}"
+    else:
+        return f"{simbolo}{valor:,.2f}"
 
-# Título principal
-st.markdown("<h1 style='color: #FB6500;'>🚚 Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
+# Sidebar de input
+km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
 
-# Cargar archivo Excel desde el repositorio
-url_excel = "https://raw.githubusercontent.com/William-hub23/calculadora-expeditados/main/CAT_TAB.xlsx"
-response = requests.get(url_excel)
-excel_data = BytesIO(response.content)
+# Botón para calcular
+if st.button("Calcular"):
+    try:
+        # Tabulador ALA
+        venta_ala_mxn = ALA_TAB[ALA_TAB["KM"] <= km].iloc[-1]["MXN"]
+        venta_ala_usd = ALA_TAB[ALA_TAB["KM"] <= km].iloc[-1]["USD"]
 
-try:
-    df_ala = pd.read_excel(excel_data, sheet_name='ALA_TAB')
-    df_peak = pd.read_excel(excel_data, sheet_name='PEAK_TAB')
-    df_rango = pd.read_excel(excel_data, sheet_name='VENTA_TAB')
+        # Tabulador PEAK
+        venta_peak_mxn = PEAK_TAB[PEAK_TAB["KM"] <= km].iloc[-1]["MXN"]
+        venta_peak_usd = PEAK_TAB[PEAK_TAB["KM"] <= km].iloc[-1]["USD"]
 
-    km = st.number_input("Ingresa los kilómetros del viaje", min_value=1.0, step=1.0)
-
-    if st.button("Calcular"):
-        # Cálculo por ALA
-        df_ala_filtrado = df_ala[df_ala['KM'] >= km].sort_values(by='KM').head(1)
-        venta_ala_mxn = df_ala_filtrado['MXN'].values[0]
-        venta_ala_usd = df_ala_filtrado['USD'].values[0]
-
-        # Cálculo por PEAK
-        df_peak_filtrado = df_peak[df_peak['KM'] >= km].sort_values(by='KM').head(1)
-        venta_peak_mxn = df_peak_filtrado['MXN'].values[0]
-        venta_peak_usd = df_peak_filtrado['USD'].values[0]
-
-        # Cálculo por RANGO
-        df_rango_filtrado = df_rango[
-            (df_rango['KM_MIN'] <= km) & (df_rango['KM_MAX'] >= km)
+        # Tabulador por Rango
+        rango_tab = VENTA_TAB[
+            (VENTA_TAB["KM_INICIAL"] <= km) & (VENTA_TAB["KM_FINAL"] >= km)
         ]
-        if not df_rango_filtrado.empty:
-            venta_rango_mxn = df_rango_filtrado['MXN'].values[0] * km
-            venta_rango_usd = df_rango_filtrado['USD'].values[0] * km
-        else:
-            venta_rango_mxn = 0
-            venta_rango_usd = 0
+        if rango_tab.empty:
+            raise ValueError("El kilometraje ingresado no está dentro de ningún rango.")
+        venta_rango_mxn = rango_tab["MXN"].values[0]
+        venta_rango_usd = rango_tab["USD"].values[0]
 
         # Mostrar resultados
         st.success(f"Resultado para {km:.2f} KM")
+
         with st.expander("► Tabulador ALA"):
-            st.markdown(f"- **MXN:** ${venta_ala_mxn:,.2f}")
-            st.markdown(f"- **USD:** ${venta_ala_usd:,.2f}")
+            st.write("• MXN:", f"**{formato_moneda(venta_ala_mxn, 'MXN')}**")
+            st.write("• USD:", f"**{formato_moneda(venta_ala_usd, 'USD')}**")
+
         with st.expander("► Tabulador Peak"):
-            st.markdown(f"- **MXN:** ${venta_peak_mxn:,.2f}")
-            st.markdown(f"- **USD:** ${venta_peak_usd:,.2f}")
+            st.write("• MXN:", f"**{formato_moneda(venta_peak_mxn, 'MXN')}**")
+            st.write("• USD:", f"**{formato_moneda(venta_peak_usd, 'USD')}**")
+
         with st.expander("► Tabulador por Rango de KM"):
-            st.markdown(f"- **MXN:** ${venta_rango_mxn:,.2f}")
-            st.markdown(f"- **USD:** ${venta_rango_usd:,.2f}")
+            st.write("• MXN:", f"**{formato_moneda(venta_rango_mxn, 'MXN')}**")
+            st.write("• USD:", f"**{formato_moneda(venta_rango_usd, 'USD')}**")
 
-        # Botón para exportar a Excel
+        # Descargar archivo Excel
         datos = {
-            'Kilómetros': [km],
-            'ALA_MXN': [venta_ala_mxn],
-            'ALA_USD': [venta_ala_usd],
-            'PEAK_MXN': [venta_peak_mxn],
-            'PEAK_USD': [venta_peak_usd],
-            'RANGO_MXN': [venta_rango_mxn],
-            'RANGO_USD': [venta_rango_usd],
+            "Kilómetros": [km],
+            "ALA_MXN": [venta_ala_mxn],
+            "ALA_USD": [venta_ala_usd],
+            "PEAK_MXN": [venta_peak_mxn],
+            "PEAK_USD": [venta_peak_usd],
+            "RANGO_MXN": [venta_rango_mxn],
+            "RANGO_USD": [venta_rango_usd],
         }
-        df_resultado = pd.DataFrame(datos)
 
+        df_resultado = pd.DataFrame(datos)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+            df_resultado.to_excel(writer, index=False, sheet_name="Tarifas")
         st.download_button(
             label="📥 Descargar tarifas en Excel",
-            data=df_resultado.to_csv(index=False).encode('utf-8'),
-            file_name=f"tarifas_{int(km)}km.csv",
-            mime="text/csv"
+            data=buffer.getvalue(),
+            file_name=f"tarifas_{int(km)}km.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+        # Historial de consultas por día
+        hoy = datetime.now().strftime('%Y-%m-%d')
+        csv_path = "historial_consultas.csv"
+        if Path(csv_path).exists():
+            df_hist = pd.read_csv(csv_path)
+        else:
+            df_hist = pd.DataFrame(columns=["fecha", "km", "ALA_MXN", "PEAK_MXN", "RANGO_MXN", "ALA_USD", "PEAK_USD", "RANGO_USD"])
+
+        df_hist = pd.concat([df_hist, pd.DataFrame([{
+            "fecha": hoy,
+            "km": km,
+            "ALA_MXN": venta_ala_mxn,
+            "PEAK_MXN": venta_peak_mxn,
+            "RANGO_MXN": venta_rango_mxn,
+            "ALA_USD": venta_ala_usd,
+            "PEAK_USD": venta_peak_usd,
+            "RANGO_USD": venta_rango_usd
+        }])], ignore_index=True)
+
+        df_hist.to_csv(csv_path, index=False)
+
+    except Exception as e:
+        st.error(f"Ocurrió un error: {e}")
+
+# Gráfica diaria de historial
+st.markdown("### 📊 Historial de consultas por día")
+try:
+    df_hist = pd.read_csv("historial_consultas.csv")
+    hoy = datetime.now().strftime('%Y-%m-%d')
+    df_hoy = df_hist[df_hist["fecha"] == hoy]
+
+    if not df_hoy.empty:
+        df_melted = df_hoy.melt(id_vars=["fecha", "km"], value_vars=["ALA_MXN", "PEAK_MXN", "RANGO_MXN", "ALA_USD", "PEAK_USD", "RANGO_USD"],
+                                var_name="Tipo", value_name="Tarifa")
+        fig = px.bar(df_melted, x="Tipo", y="Tarifa", color="Tipo", barmode="group",
+                     title=f"Consultas del {hoy} (Horario centro de México)")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("El historial de consultas aún no ha sido creado.")
+
 except Exception as e:
-    st.error(f"Ocurrió un error: {e}")
+    st.error(f"No se pudo mostrar el historial: {e}")
