@@ -22,7 +22,7 @@ st.markdown("""
             color: white;
         }
         .stNumberInput > div {
-            background-color: #ffffff10;
+            background-color: white;
             color: white;
         }
         h1, h2, h3, h4, h5 {
