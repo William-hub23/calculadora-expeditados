@@ -31,7 +31,12 @@ st.markdown("""
         .stAlert {
             background-color: #ffffff10;
         }
+    
+    input {
+        color: white !important;
+    }
     </style>
+    
 """, unsafe_allow_html=True)
 
 # --- AUTENTICACIÓN ---
@@ -113,5 +118,27 @@ if st.button("Calcular"):
         - USD: **${venta_rango_usd:,.2f}**
         """)
 
+    
+        # Guardar datos en un DataFrame
+        datos = {
+            'Kilómetros': [km],
+            'ALA_MXN': [venta_ala_mxn],
+            'ALA_USD': [venta_ala_usd],
+            'PEAK_MXN': [venta_peak_mxn],
+            'PEAK_USD': [venta_peak_usd],
+            'RANGO_MXN': [venta_rango_mxn],
+            'RANGO_USD': [venta_rango_usd]
+        }
+        df_resultado = pd.DataFrame(datos)
+
+        # Botón para descargar
+        st.download_button(
+            label="📥 Descargar tarifas en Excel",
+            data=df_resultado.to_excel(index=False, engine='openpyxl'),
+            file_name=f"tarifas_{int(km)}km.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
     except Exception as e:
+
         st.error(f"Ocurrió un error: {e}")
