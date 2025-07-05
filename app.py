@@ -1,144 +1,115 @@
 
 import streamlit as st
 import pandas as pd
-from PIL import Image
+from datetime import datetime
+import base64
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
+# Configuración de página
+st.set_page_config(page_title="Calculadora de Venta de Viajes Expeditados", layout="centered")
 
-# --- ESTILOS PERSONALIZADOS ---
-st.markdown("""
+# Estilos personalizados
+st.markdown(
+    """
     <style>
-        body {
+        .main {
             background-color: #0B2341;
-            color: #FB6500;
+            color: white;
         }
-        .stTextInput > div > div > input {
-            background-color: #ffffff10;
+        .title {
             color: #FB6500;
+            font-size: 48px;
+            font-weight: bold;
         }
-        .stButton button {
+        .subtitle {
+            color: #FB6500;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .stButton>button {
             background-color: #FB6500;
             color: white;
         }
-        .stNumberInput > div {
-            background-color: #ffffff10;
-            color: #FB6500;
+        .stDownloadButton>button {
+            background-color: #FB6500;
+            color: white;
         }
-        h1, h2, h3, h4, h5 {
-            color: #FB6500;
-        }
-        .stAlert {
-            background-color: #ffffff10;
-        }
-    
-    input {
-        color: white !important;
-    }
     </style>
-    
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- AUTENTICACIÓN ---
-def login():
-    with st.form("login"):
-        st.image("banner.png", use_container_width=True)
-        st.subheader("🔒 Acceso restringido")
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        submit = st.form_submit_button("Entrar")
-        if submit:
-            if username == "admin" and password == "viajes123":
-                st.session_state['authenticated'] = True
-            else:
-                st.error("Credenciales incorrectas")
+# Banner
+st.image("https://trayecto.mx/wp-content/uploads/2023/07/WhatsApp-Image-2023-07-07-at-11.50.03-AM.jpeg", use_column_width=True)
 
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
+st.markdown("<h1 class='title'>🚛 Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
-if not st.session_state['authenticated']:
-    login()
+# Cargar archivos
+try:
+    ala_tab = pd.read_excel("CAT_TAB.xlsx", sheet_name="ALA_TAB")
+    peak_tab = pd.read_excel("CAT_TAB.xlsx", sheet_name="PEAK_TAB")
+    venta_tab = pd.read_excel("CAT_TAB.xlsx", sheet_name="VENTA_TAB")
+except Exception as e:
+    st.error(f"Error al cargar archivos: {e}")
     st.stop()
 
-# --- BANNER ---
-st.image("banner.png", use_container_width=True)
+# Input de kilómetros
+km = st.number_input("Ingresa los kilómetros del viaje", min_value=1.0, value=60.0)
 
-# --- TÍTULO ---
-st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
-
-# --- CARGA DE DATOS ---
-archivo_excel = 'CAT_TAB.xlsx'
-ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
-peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
-venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
-
-# --- CALCULADORA ---
-km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
-
+# Botón para calcular
 if st.button("Calcular"):
     try:
-        # ALA_TAB
-        if km in ala_tab['KMs'].values:
-            fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
-        else:
-            fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
-        venta_ala_mxn = fila_ala['Venta total']
-        venta_ala_usd = fila_ala['BID (USD)']
+        # ALA
+        ala_row = ala_tab[ala_tab["KM"] >= km].iloc[0]
+        ala_mxn = ala_row["MXN"]
+        ala_usd = ala_row["USD"]
 
-        # PEAK_TAB
-        peak_tab_valid = peak_tab[pd.to_numeric(peak_tab['Promedio KM'], errors='coerce').notna()]
-        peak_tab_valid['Promedio KM'] = peak_tab_valid['Promedio KM'].astype(float)
-        fila_peak = peak_tab_valid.iloc[(peak_tab_valid['Promedio KM'] - km).abs().argsort()[:1]].iloc[0]
-        venta_peak_mxn = fila_peak['MXN']
-        venta_peak_usd = fila_peak['USD']
+        # PEAK
+        peak_row = peak_tab[peak_tab["KM"] >= km].iloc[0]
+        peak_mxn = peak_row["MXN"]
+        peak_usd = peak_row["USD"]
 
-        # VENTA_TAB
-        fila_venta = venta_tab[venta_tab['Rangos KM'] >= km].sort_values(by='Rangos KM').head(1)
-        if not fila_venta.empty:
-            precio_mxn = fila_venta.iloc[0]['$/Km MXN']
-            precio_usd = fila_venta.iloc[0]['$/Km USD']
-        else:
-            precio_mxn = venta_tab.iloc[-1]['$/Km MXN']
-            precio_usd = venta_tab.iloc[-1]['$/Km USD']
-        venta_rango_mxn = km * precio_mxn
-        venta_rango_usd = km * precio_usd
+        # VENTA
+        venta_row = venta_tab[venta_tab["KM"] >= km].iloc[0]
+        venta_mxn = venta_row["MXN"]
+        venta_usd = venta_row["USD"]
 
-        st.success(f"Resultado para {km:.2f} KM")
-        st.markdown(f"""
-        ### ▶ Tabulador ALA  
-        - MXN: **${venta_ala_mxn:,.2f}**  
-        - USD: **${venta_ala_usd:,.2f}**  
+        # Mostrar resultados
+        with st.expander("► Tabulador ALA"):
+            st.markdown(f"- MXN: **${ala_mxn:,.2f}**")
+            st.markdown(f"- USD: **${ala_usd:,.2f}**")
 
-        ### ▶ Tabulador Peak  
-        - MXN: **${venta_peak_mxn:,.2f}**  
-        - USD: **${venta_peak_usd:,.2f}**  
+        with st.expander("► Tabulador Peak"):
+            st.markdown(f"- MXN: **${peak_mxn:,.2f}**")
+            st.markdown(f"- USD: **${peak_usd:,.2f}**")
 
-        ### ▶ Tabulador por Rango de KM  
-        - MXN: **${venta_rango_mxn:,.2f}**  
-        - USD: **${venta_rango_usd:,.2f}**
-        """)
+        with st.expander("► Tabulador por Rango de KM"):
+            st.markdown(f"- MXN: **${venta_mxn:,.2f}**")
+            st.markdown(f"- USD: **${venta_usd:,.2f}**")
 
-    
-        # Guardar datos en un DataFrame
-        datos = {
-            'Kilómetros': [km],
-            'ALA_MXN': [venta_ala_mxn],
-            'ALA_USD': [venta_ala_usd],
-            'PEAK_MXN': [venta_peak_mxn],
-            'PEAK_USD': [venta_peak_usd],
-            'RANGO_MXN': [venta_rango_mxn],
-            'RANGO_USD': [venta_rango_usd]
-        }
-        df_resultado = pd.DataFrame(datos)
+        # Guardar resultados en Excel
+        resultados_df = pd.DataFrame({
+            "Tipo": ["ALA", "PEAK", "Por KM"],
+            "MXN": [ala_mxn, peak_mxn, venta_mxn],
+            "USD": [ala_usd, peak_usd, venta_usd],
+            "KM": [km, km, km],
+            "Fecha": [datetime.now()] * 3
+        })
 
-        # Botón para descargar
-        st.download_button(
-            label="📥 Descargar tarifas en Excel",
-            data=df_resultado.to_excel(index=False, engine='openpyxl'),
-            file_name=f"tarifas_{int(km)}km.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        resultados_df.to_csv("historial_consultas.csv", mode='a', header=not Path("historial_consultas.csv").exists(), index=False)
 
+        # Descargar Excel
+        st.markdown("### 📥 Descargar comparativa")
+        csv = resultados_df.to_csv(index=False).encode("utf-8")
+        st.download_button("Descargar CSV", csv, "tarifas_calculadas.csv", "text/csv")
     except Exception as e:
+        st.error(f"Error al calcular tarifas: {e}")
 
-        st.error(f"Ocurrió un error: {e}")
+# Mostrar historial
+st.markdown("## 📊 Historial de consultas por día")
+try:
+    hist = pd.read_csv("historial_consultas.csv")
+    hist["Fecha"] = pd.to_datetime(hist["Fecha"])
+    hist = hist.sort_values("Fecha", ascending=False)
+    st.dataframe(hist, use_container_width=True)
+except Exception as e:
+    st.warning(f"No se pudo mostrar el historial: {e}")
