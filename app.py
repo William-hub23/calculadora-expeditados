@@ -41,7 +41,7 @@ st.markdown(
 # Banner
 st.image("https://trayecto.mx/wp-content/uploads/2023/07/WhatsApp-Image-2023-07-07-at-11.50.03-AM.jpeg", use_column_width=True)
 
-st.markdown("<h1 class='title'>🚛 Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='title'> Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
 # Cargar archivos
 try:
