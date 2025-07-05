@@ -2,7 +2,13 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
+import streamlit as st
 
+# Personalizar favicon
+st.set_page_config(
+    page_title="Calculadora de Viajes Expeditados",
+    page_icon="banner_trayecto.png"
+)
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
 
