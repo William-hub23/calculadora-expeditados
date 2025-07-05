@@ -1,15 +1,73 @@
 
 import streamlit as st
 import pandas as pd
+from PIL import Image
 
-# Cargar archivo
+# --- CONFIGURACIÓN ---
+st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
+
+# --- ESTILOS PERSONALIZADOS ---
+st.markdown("""
+    <style>
+        body {
+            background-color: #0B2341;
+            color: #FB6500;
+        }
+        .stTextInput > div > div > input {
+            background-color: #ffffff10;
+            color: #FB6500;
+        }
+        .stButton button {
+            background-color: #FB6500;
+            color: white;
+        }
+        .stNumberInput > div {
+            background-color: #ffffff10;
+            color: #FB6500;
+        }
+        h1, h2, h3, h4, h5 {
+            color: #FB6500;
+        }
+        .stAlert {
+            background-color: #ffffff10;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- AUTENTICACIÓN ---
+def login():
+    with st.form("login"):
+        st.image("banner.png", use_column_width=True)
+        st.subheader("🔒 Acceso restringido")
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        submit = st.form_submit_button("Entrar")
+        if submit:
+            if username == "admin" and password == "viajes123":
+                st.session_state['authenticated'] = True
+            else:
+                st.error("Credenciales incorrectas")
+
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+
+if not st.session_state['authenticated']:
+    login()
+    st.stop()
+
+# --- BANNER ---
+st.image("banner.png", use_column_width=True)
+
+# --- TÍTULO ---
+st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
+
+# --- CARGA DE DATOS ---
 archivo_excel = 'CAT_TAB.xlsx'
 ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
 peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
 venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
 
-st.title("🚚 Calculadora de Venta de Viajes Expeditados")
-
+# --- CALCULADORA ---
 km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
 
 if st.button("Calcular"):
