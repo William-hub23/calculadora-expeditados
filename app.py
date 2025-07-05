@@ -23,10 +23,10 @@ st.markdown("""
         }
         .stNumberInput > div {
             background-color: #ffffff10;
-            color: #FB6500;
+            color: white;
         }
         h1, h2, h3, h4, h5 {
-            color: #FB6500;
+            color: white;
         }
         .stAlert {
             background-color: #ffffff10;
