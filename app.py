@@ -3,35 +3,6 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 import streamlit as st
-import streamlit as st
-
-st.set_page_config(page_title="Calculadora Expeditados", page_icon="🚛", layout="wide")
-
-# Fondo de imagen a toda la página con opacidad del 20%
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-image: url("banner.png");
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }
-
-    .css-18e3th9 {
-        background-color: rgba(0, 0, 0, 0.80);  /* Fondo interno para mayor legibilidad */
-    }
-
-    .block-container {
-        background-color: rgba(255, 255, 255, 0.2);  /* Fondo de contenido con transparencia */
-        border-radius: 12px;
-        padding: 2rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 
 # Personalizar favicon
