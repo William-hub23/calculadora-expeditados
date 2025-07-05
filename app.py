@@ -37,7 +37,7 @@ st.markdown("""
 # --- AUTENTICACIÓN ---
 def login():
     with st.form("login"):
-        st.image("banner.png", use_column_width=True)
+        st.image("banner.png", use_container_width=True)
         st.subheader("🔒 Acceso restringido")
         username = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
@@ -56,7 +56,7 @@ if not st.session_state['authenticated']:
     st.stop()
 
 # --- BANNER ---
-st.image("banner.png", use_column_width=True)
+st.image("banner.png", use_container_width=True)
 
 # --- TÍTULO ---
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
