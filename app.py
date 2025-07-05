@@ -1,144 +1,134 @@
 
 import streamlit as st
 import pandas as pd
-from PIL import Image
+from datetime import datetime
+import base64
+from io import BytesIO
+import plotly.express as px
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
+st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 
-# --- ESTILOS PERSONALIZADOS ---
-st.markdown("""
-    <style>
-        body {
-            background-color: #0B2341;
-            color: #FB6500;
-        }
-        .stTextInput > div > div > input {
-            background-color: #ffffff10;
-            color: #FB6500;
-        }
-        .stButton button {
-            background-color: #FB6500;
-            color: white;
-        }
-        .stNumberInput > div {
-            background-color: #ffffff10;
-            color: #FB6500;
-        }
-        h1, h2, h3, h4, h5 {
-            color: #FB6500;
-        }
-        .stAlert {
-            background-color: #ffffff10;
-        }
-    
-    input {
-        color: white !important;
-    }
-    </style>
-    
-""", unsafe_allow_html=True)
+# --- BANNER CON LOGO Y FONDO PERSONALIZADO ---
+st.markdown(
+    f"""
+    <div style="background-color:#0B2341;padding:10px;border-radius:10px">
+        <img src="https://raw.githubusercontent.com/William-hub23/calculadora-expeditados/main/banner.png" style="width:100%">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# --- AUTENTICACIÓN ---
-def login():
-    with st.form("login"):
-        st.image("banner.png", use_container_width=True)
-        st.subheader("🔒 Acceso restringido")
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        submit = st.form_submit_button("Entrar")
-        if submit:
-            if username == "admin" and password == "viajes123":
-                st.session_state['authenticated'] = True
-            else:
-                st.error("Credenciales incorrectas")
+# --- ENCABEZADO ---
+st.markdown("<h1 style='color:#FB6500;'>🚛 Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
+# --- ACCESO CON CONTRASEÑA BÁSICA ---
 if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
+    st.session_state.authenticated = False
 
-if not st.session_state['authenticated']:
-    login()
+if not st.session_state.authenticated:
+    st.subheader("🔒 Acceso restringido")
+    username = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
+        if username == "admin" and password == "trayecto2025":
+            st.session_state.authenticated = True
+        else:
+            st.error("Usuario o contraseña incorrectos")
     st.stop()
 
-# --- BANNER ---
-st.image("banner.png", use_container_width=True)
-
-# --- TÍTULO ---
-st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
-
 # --- CARGA DE DATOS ---
-archivo_excel = 'CAT_TAB.xlsx'
-ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
-peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
-venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
+@st.cache_data
+def cargar_datos():
+    return pd.read_excel("CAT_TAB.xlsx", sheet_name=None)
 
-# --- CALCULADORA ---
-km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
+datos_tab = cargar_datos()
 
-if st.button("Calcular"):
+# --- ENTRADA DE KILÓMETROS ---
+km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, value=50, step=10, format="%d")
+
+if st.button("Calcular", use_container_width=True):
     try:
-        # ALA_TAB
-        if km in ala_tab['KMs'].values:
-            fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
-        else:
-            fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
-        venta_ala_mxn = fila_ala['Venta total']
-        venta_ala_usd = fila_ala['BID (USD)']
+        df_ala = datos_tab["ALA"]
+        df_peak = datos_tab["PEAK"]
+        df_rango = datos_tab["Venta_por_km"]
 
-        # PEAK_TAB
-        peak_tab_valid = peak_tab[pd.to_numeric(peak_tab['Promedio KM'], errors='coerce').notna()]
-        peak_tab_valid['Promedio KM'] = peak_tab_valid['Promedio KM'].astype(float)
-        fila_peak = peak_tab_valid.iloc[(peak_tab_valid['Promedio KM'] - km).abs().argsort()[:1]].iloc[0]
-        venta_peak_mxn = fila_peak['MXN']
-        venta_peak_usd = fila_peak['USD']
+        # Cálculos por tabulador
+        venta_ala_mxn = float(df_ala.loc[df_ala["KM"] == km, "MXN"].values[0])
+        venta_ala_usd = float(df_ala.loc[df_ala["KM"] == km, "USD"].values[0])
 
-        # VENTA_TAB
-        fila_venta = venta_tab[venta_tab['Rangos KM'] >= km].sort_values(by='Rangos KM').head(1)
-        if not fila_venta.empty:
-            precio_mxn = fila_venta.iloc[0]['$/Km MXN']
-            precio_usd = fila_venta.iloc[0]['$/Km USD']
-        else:
-            precio_mxn = venta_tab.iloc[-1]['$/Km MXN']
-            precio_usd = venta_tab.iloc[-1]['$/Km USD']
-        venta_rango_mxn = km * precio_mxn
-        venta_rango_usd = km * precio_usd
+        venta_peak_mxn = float(df_peak.loc[df_peak["KM"] == km, "MXN"].values[0])
+        venta_peak_usd = float(df_peak.loc[df_peak["KM"] == km, "USD"].values[0])
+
+        row_rango = df_rango[(df_rango["KM_MIN"] <= km) & (df_rango["KM_MAX"] >= km)].iloc[0]
+        venta_rango_mxn = km * float(row_rango["MXN_KM"])
+        venta_rango_usd = km * float(row_rango["USD_KM"])
 
         st.success(f"Resultado para {km:.2f} KM")
-        st.markdown(f"""
-        ### ▶ Tabulador ALA  
-        - MXN: **${venta_ala_mxn:,.2f}**  
-        - USD: **${venta_ala_usd:,.2f}**  
 
-        ### ▶ Tabulador Peak  
-        - MXN: **${venta_peak_mxn:,.2f}**  
-        - USD: **${venta_peak_usd:,.2f}**  
+        with st.expander("► Tabulador ALA", expanded=True):
+            st.markdown(f"- MXN: **${venta_ala_mxn:,.2f}**")
+            st.markdown(f"- USD: **${venta_ala_usd:,.2f}**")
 
-        ### ▶ Tabulador por Rango de KM  
-        - MXN: **${venta_rango_mxn:,.2f}**  
-        - USD: **${venta_rango_usd:,.2f}**
-        """)
+        with st.expander("► Tabulador Peak", expanded=True):
+            st.markdown(f"- MXN: **${venta_peak_mxn:,.2f}**")
+            st.markdown(f"- USD: **${venta_peak_usd:,.2f}**")
 
-    
-        # Guardar datos en un DataFrame
+        with st.expander("► Tabulador por Rango de KM", expanded=True):
+            st.markdown(f"- MXN: **${venta_rango_mxn:,.2f}**")
+            st.markdown(f"- USD: **${venta_rango_usd:,.2f}**")
+
+        # --- GUARDAR CONSULTA EN CSV ---
+        fecha_hora = datetime.now().astimezone().strftime("%Y-%m-%d,%H:%M:%S")
+        fila = f"{fecha_hora},{km},{venta_ala_mxn},{venta_ala_usd},{venta_peak_mxn},{venta_peak_usd},{venta_rango_mxn},{venta_rango_usd}\n"
+        with open("historial.csv", "a") as file:
+            file.write(fila)
+
+        # --- BOTÓN DE DESCARGA EXCEL ---
         datos = {
-            'Kilómetros': [km],
-            'ALA_MXN': [venta_ala_mxn],
-            'ALA_USD': [venta_ala_usd],
-            'PEAK_MXN': [venta_peak_mxn],
-            'PEAK_USD': [venta_peak_usd],
-            'RANGO_MXN': [venta_rango_mxn],
-            'RANGO_USD': [venta_rango_usd]
+            "Kilómetros": [km],
+            "ALA_MXN": [venta_ala_mxn],
+            "ALA_USD": [venta_ala_usd],
+            "PEAK_MXN": [venta_peak_mxn],
+            "PEAK_USD": [venta_peak_usd],
+            "RANGO_MXN": [venta_rango_mxn],
+            "RANGO_USD": [venta_rango_usd],
         }
         df_resultado = pd.DataFrame(datos)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            df_resultado.to_excel(writer, index=False, sheet_name="Tarifas")
 
-        # Botón para descargar
         st.download_button(
             label="📥 Descargar tarifas en Excel",
-            data=df_resultado.to_excel(index=False, engine='openpyxl'),
+            data=output.getvalue(),
             file_name=f"tarifas_{int(km)}km.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
     except Exception as e:
-
         st.error(f"Ocurrió un error: {e}")
+
+# --- HISTOGRAMA DE CONSULTAS ---
+st.markdown("---")
+st.markdown("### 📊 Historial de consultas por día")
+try:
+    df_hist = pd.read_csv("historial.csv", names=[
+        "fecha", "hora", "km", "ALA_MXN", "ALA_USD", "PEAK_MXN", "PEAK_USD", "RANGO_MXN", "RANGO_USD"
+    ])
+    hoy = datetime.now().astimezone().strftime("%Y-%m-%d")
+    df_hoy = df_hist[df_hist["fecha"] == hoy]
+
+    for tab in ["ALA", "PEAK", "RANGO"]:
+        fig = px.bar(
+            df_hoy,
+            x="km",
+            y=[f"{tab}_MXN", f"{tab}_USD"],
+            barmode="group",
+            labels={"value": "Venta", "km": "Kilómetros"},
+            title=f"Historial de {tab} - {hoy}"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+except FileNotFoundError:
+    st.warning("El historial de consultas aún no ha sido creado.")
