@@ -5,26 +5,34 @@ from PIL import Image
 import streamlit as st
 import streamlit as st
 
-# Personaliza favicon y título
-st.set_page_config(page_title="Calculadora Expeditados", page_icon="banner.png")
+st.set_page_config(page_title="Calculadora Expeditados", page_icon="🚛", layout="wide")
 
-# CSS para el banner con transparencia
+# Fondo de imagen a toda la página con opacidad del 20%
 st.markdown(
-    f"""
+    """
     <style>
-    .stApp {{
+    .stApp {
         background-image: url("banner.png");
         background-size: cover;
         background-position: center;
-        opacity: 0.2;  /* Esta es la opacidad del fondo */
-        position: fixed;
-        width: 100%;
-        height: 100%;
-    }}
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+
+    .css-18e3th9 {
+        background-color: rgba(0, 0, 0, 0.80);  /* Fondo interno para mayor legibilidad */
+    }
+
+    .block-container {
+        background-color: rgba(255, 255, 255, 0.2);  /* Fondo de contenido con transparencia */
+        border-radius: 12px;
+        padding: 2rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # Personalizar favicon
 st.set_page_config(
