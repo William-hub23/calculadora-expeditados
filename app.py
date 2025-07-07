@@ -2,11 +2,6 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
-st.set_page_config(
-    page_title="Calculadora de Viajes Expeditados",
-    page_icon="banner_trayecto.png",  # Asegúrate que sea una imagen pequeña (ideal: 32x32 px)
-    layout="centered"
-)
 
 # Configuración de página
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
@@ -37,7 +32,7 @@ st.markdown("""
             background-color: #0B2341;
         }
         .resaltado {
-            background-color: white;
+            background-color: #107144;
             padding: 1em;
             border-radius: 10px;
         }
@@ -110,7 +105,7 @@ if st.button("Calcular"):
         venta_ext_usd = fila_ext['Venta USD']
 
         st.markdown(f"""<div class='resaltado'>
-        <h3>▶ Tabulador Por Km</h3>
+        <h3>▶ Venta por Km (Extendida)</h3>
         <ul>
             <li><b>MXN:</b> ${venta_ext_mxn:,.2f}</li>
             <li><b>USD:</b> ${venta_ext_usd:,.2f}</li>
