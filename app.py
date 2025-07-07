@@ -2,6 +2,11 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
+from PIL import Image
+import streamlit as st
+
+# Cargar imagen (asegúrate de que esté en el mismo directorio del script .py o en la ruta especificada)
+st.image("banner_trayecto.png", use_column_width=True)
 
 # Configuración de página
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
