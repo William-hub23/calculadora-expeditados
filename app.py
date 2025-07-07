@@ -86,14 +86,7 @@ if st.button("Calcular"):
             fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
         venta_ala_mxn = fila_ala['Venta total']
         venta_ala_usd = fila_ala['BID (USD)']
-
-        # PEAK_TAB
-        peak_tab_valid = peak_tab[pd.to_numeric(peak_tab['Promedio KM'], errors='coerce').notna()]
-        peak_tab_valid['Promedio KM'] = peak_tab_valid['Promedio KM'].astype(float)
-        fila_peak = peak_tab_valid.iloc[(peak_tab_valid['Promedio KM'] - km).abs().argsort()[:1]].iloc[0]
-        venta_peak_mxn = fila_peak['MXN']
-        venta_peak_usd = fila_peak['USD']
-
+        
         # VENTA_TAB
         fila_venta = venta_tab[venta_tab['Rangos KM'] >= km].sort_values(by='Rangos KM').head(1)
         if not fila_venta.empty:
@@ -105,19 +98,25 @@ if st.button("Calcular"):
         venta_rango_mxn = km * precio_mxn
         venta_rango_usd = km * precio_usd
 
+        # RESULTADO PRINCIPAL
         st.success(f"Resultado para {km:.2f} KM")
+
+        # TABULADOR POR KM DESTACADO
+        st.markdown(f"""
+        <div style="background-color:#0F5132;padding:15px;border-radius:10px;color:white;">
+        <h3>▶ Tabulador por Rango de KM</h3>
+        <ul>
+            <li><strong>MXN:</strong> ${venta_rango_mxn:,.2f}</li>
+            <li><strong>USD:</strong> ${venta_rango_usd:,.2f}</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # TABULADOR ALA
         st.markdown(f"""
         ### ▶ Tabulador ALA  
         - MXN: **${venta_ala_mxn:,.2f}**  
         - USD: **${venta_ala_usd:,.2f}**  
-
-        ### ▶ Tabulador Peak  
-        - MXN: **${venta_peak_mxn:,.2f}**  
-        - USD: **${venta_peak_usd:,.2f}**  
-
-        ### ▶ Tabulador por Rango de KM  
-        - MXN: **${venta_rango_mxn:,.2f}**  
-        - USD: **${venta_rango_usd:,.2f}**
         """)
 
     except Exception as e:
