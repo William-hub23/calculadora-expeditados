@@ -1,14 +1,9 @@
-
 import streamlit as st
 import pandas as pd
 from PIL import Image
 
-# Configuración de la página
-st.set_page_config(
-    page_title="Calculadora de Viajes Expeditados",
-    page_icon="banner_trayecto.png",
-    layout="centered"
-)
+# Configuración de página
+st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 
 # Estilos personalizados
 st.markdown("""
@@ -34,6 +29,11 @@ st.markdown("""
         }
         .stAlert {
             background-color: #0B2341;
+        }
+        .resaltado {
+            background-color: #107144;
+            padding: 1em;
+            border-radius: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -68,47 +68,30 @@ st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expe
 # Carga de datos
 archivo_excel = 'CAT_TAB.xlsx'
 ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
-venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB')
 
-# Entrada de kilómetros
+# Entrada de KM
 km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
 
 if st.button("Calcular"):
     try:
         st.success(f"Resultado para {km:.2f} KM")
 
-        # Tabulador por Rango de KM
-        fila_venta = venta_tab[venta_tab['Rangos KM'] >= km].sort_values(by='Rangos KM').head(1)
-        if not fila_venta.empty:
-            precio_mxn = fila_venta.iloc[0]['$/Km MXN']
-            precio_usd = fila_venta.iloc[0]['$/Km USD']
-        else:
-            precio_mxn = venta_tab.iloc[-1]['$/Km MXN']
-            precio_usd = venta_tab.iloc[-1]['$/Km USD']
-        venta_rango_mxn = km * precio_mxn
-        venta_rango_usd = km * precio_usd
-
-        with st.container():
-            st.markdown("""<div style='background-color:#107849;padding:15px;border-radius:10px'>
-            <h4 style='color:white;'>▶ Tabulador por Rango de KM</h4>
-            <ul>
-            <li><strong>MXN:</strong> ${:,.2f}</li>
-            <li><strong>USD:</strong> ${:,.2f}</li>
-            </ul>
-            </div>""".format(venta_rango_mxn, venta_rango_usd), unsafe_allow_html=True)
-
-        # Venta por KM Extendida
-        ventaext_tab['KM'] = pd.to_numeric(ventaext_tab['KM'], errors='coerce')
+        # VENTA POR KM (EXTENDIDA)
+        ventaext_tab['KM'] = ventaext_tab['KM'].astype(float)
         fila_ext = ventaext_tab.iloc[(ventaext_tab['KM'] - km).abs().argsort()[:1]].iloc[0]
         venta_ext_mxn = fila_ext['Venta MXN']
         venta_ext_usd = fila_ext['Venta USD']
 
-        st.markdown("### ▶ Venta por Km (Extendida)")
-        st.markdown(f"- MXN: ${venta_ext_mxn:,.2f}", unsafe_allow_html=True)
-        st.markdown(f"- USD: ${venta_ext_usd:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"""<div class='resaltado'>
+        <h3>▶ Venta por Km (Extendida)</h3>
+        <ul>
+            <li><b>MXN:</b> ${venta_ext_mxn:,.2f}</li>
+            <li><b>USD:</b> ${venta_ext_usd:,.2f}</li>
+        </ul>
+        </div>""", unsafe_allow_html=True)
 
-        # Tabulador ALA
+        # TABULADOR ALA
         if km in ala_tab['KMs'].values:
             fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
         else:
@@ -116,9 +99,10 @@ if st.button("Calcular"):
         venta_ala_mxn = fila_ala['Venta total']
         venta_ala_usd = fila_ala['BID (USD)']
 
-        st.markdown("### ▶ Tabulador ALA (Comparativa)")
-        st.markdown(f"- MXN: ${venta_ala_mxn:,.2f}", unsafe_allow_html=True)
-        st.markdown(f"- USD: ${venta_ala_usd:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"""### ▶ Tabulador ALA (Comparativa)
+        - MXN: ${venta_ala_mxn:,.2f}
+        - USD: ${venta_ala_usd:,.2f}
+        """)
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
