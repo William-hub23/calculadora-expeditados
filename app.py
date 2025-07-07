@@ -37,7 +37,7 @@ st.markdown("""
             background-color: #0B2341;
         }
         .resaltado {
-            background-color: #107144;
+            background-color: white;
             padding: 1em;
             border-radius: 10px;
         }
