@@ -13,11 +13,9 @@ st.markdown("""
             background-color: #0B2341;
             color: #FB6500;
         }
-        .stTextInput > div > div > input,
-        input[type="text"],
-        input[type="password"] {
-            background-color: #ffffff10;
-            color: black !important;
+        .stTextInput > div > div > input {
+            background-color: white;
+            color: black;
         }
         .stButton button {
             background-color: #0B2341;
@@ -25,7 +23,7 @@ st.markdown("""
         }
         .stNumberInput > div {
             background-color: white;
-            color: white;
+            color: black;
         }
         h1, h2, h3, h4, h5 {
             color: white;
@@ -38,6 +36,14 @@ st.markdown("""
             padding: 1em;
             border-radius: 10px;
             color: white;
+        }
+        .resultado-box {
+            background-color: #0F2D3F;
+            padding: 0.7em;
+            border-radius: 6px;
+            margin-bottom: 1em;
+            color: white;
+            font-weight: bold;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -79,7 +85,7 @@ km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
 
 if st.button("Calcular"):
     try:
-        st.success(f"Resultado para {km:.2f} KM")
+        st.markdown(f"<div class='resultado-box'>Resultado para {km:.2f} KM</div>", unsafe_allow_html=True)
 
         # VENTA POR KM (EXTENDIDA)
         ventaext_tab['KM'] = ventaext_tab['KM'].astype(float)
