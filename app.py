@@ -1,61 +1,97 @@
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
+from PIL import Image
 
-st.set_page_config(page_title="Calculadora de Venta de Viajes Expeditados", layout="centered")
+# --- CONFIGURACIÓN DE LA PÁGINA ---
+st.set_page_config(page_title="Calculadora de Viajes Expeditados", page_icon="banner_trayecto.png", layout="centered")
 
-st.image("https://trayecto.mx/img/banner.jpeg", use_column_width=True)
+# --- AUTENTICACIÓN ---
+def login():
+    with st.form("login"):
+        st.image("banner.png", use_container_width=True)
+        st.subheader("🔒 Acceso restringido")
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        submit = st.form_submit_button("Entrar")
+        if submit:
+            if username == "admin" and password == "viajes123":
+                st.session_state['authenticated'] = True
+            else:
+                st.error("Credenciales incorrectas")
 
-st.title("Calculadora de Venta de Viajes Expeditados")
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
 
-# Cargar archivo Excel
-excel_path = "CAT_TAB.xlsx"
-venta_extendida = pd.read_excel(excel_path, sheet_name="VENTAEXT_TAB")
-ala_tab = pd.read_excel(excel_path, sheet_name="ALA_TAB")
-peak_tab = pd.read_excel(excel_path, sheet_name="PEAK_TAB")
+if not st.session_state['authenticated']:
+    login()
+    st.stop()
 
-# Limpiar nombres de columnas para evitar errores por espacios
+# --- BANNER ---
+st.image("banner.png", use_container_width=True)
+
+# --- TÍTULO ---
+st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
+
+# --- CARGA DE DATOS ---
+archivo_excel = 'CAT_TAB.xlsx'
+ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
+peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
+venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
+venta_ext = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB')
+
+# Normalizar nombres de columnas (quita espacios)
 peak_tab.columns = peak_tab.columns.str.strip()
 
-# Ingreso de kilómetros
-km = st.number_input("Ingresa los kilómetros del viaje", min_value=1.0, max_value=4000.0, step=1.0)
+# --- CALCULADORA ---
+km = st.number_input("Ingresa los kilómetros del viaje", min_value=1.0, step=1.0)
 
 if st.button("Calcular"):
-    st.success(f"Resultado para {km:.2f} KM")
+    try:
+        st.success(f"Resultado para {km:.2f} KM")
 
-    # --- Venta por KM Extendida ---
-    closest_row_ext = venta_extendida.iloc[(venta_extendida["KM"] - km).abs().argsort()[:1]]
-    mxn_ext = closest_row_ext["Venta MXN"].values[0]
-    usd_ext = closest_row_ext["Venta USD"].values[0]
+        # --- VENTAEXT_TAB (Extendida)
+        venta_ext['KM'] = venta_ext['KM'].astype(float)
+        fila_ext = venta_ext.iloc[(venta_ext['KM'] - km).abs().argsort()[:1]].iloc[0]
+        venta_ext_mxn = fila_ext['Venta MXN']
+        venta_ext_usd = fila_ext['Venta USD']
 
-    with st.expander("🟩 Venta por Km (Extendida)", expanded=True):
-        st.markdown(f"**• MXN:** ${mxn_ext:,.2f}")
-        st.markdown(f"**• USD:** ${usd_ext:,.2f}")
+        with st.expander("📗 Venta por Km (Extendida)", expanded=True):
+            st.markdown(f"- **MXN:** ${venta_ext_mxn:,.2f}")
+            st.markdown(f"- **USD:** ${venta_ext_usd:,.2f}")
 
-    # --- Tabulador ALA ---
-    closest_row_ala = ala_tab.iloc[(ala_tab["KMs"] - km).abs().argsort()[:1]]
-    mxn_ala = closest_row_ala["Venta total"].values[0]
-    usd_ala = closest_row_ala["BID (USD)"].values[0]
+        # --- ALA_TAB
+        if km in ala_tab['KMs'].values:
+            fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
+        else:
+            fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
+        venta_ala_mxn = fila_ala['Venta total']
+        venta_ala_usd = fila_ala['BID (USD)']
 
-    with st.expander("▶️ Tabulador ALA (Comparativa)"):
-        st.markdown(f"**• MXN:** ${mxn_ala:,.2f}")
-        st.markdown(f"**• USD:** ${usd_ala:,.2f}")
+        with st.expander("📘 Tabulador ALA (Comparativa)"):
+            st.markdown(f"- **MXN:** ${venta_ala_mxn:,.2f}")
+            st.markdown(f"- **USD:** ${venta_ala_usd:,.2f}")
 
-# --- Selector de Rutas desde PEAK_TAB ---
+    except Exception as e:
+        st.error(f"Ocurrió un error: {e}")
+
+# --- SELECTOR DE RUTA DESDE PEAK_TAB ---
 st.markdown("---")
-st.subheader("🧭 Selector de Ruta (Peak Tab)")
+st.markdown("### 🧭 Selector de Ruta (Peak Tab)")
 
-if "Ruta" in peak_tab.columns:
-    rutas_disponibles = peak_tab["Ruta"].dropna().unique()
-    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
+if 'Ruta' in peak_tab.columns:
+    ruta_seleccionada = st.selectbox("Selecciona una ruta:", peak_tab['Ruta'].dropna().unique())
 
     if ruta_seleccionada:
-        fila_ruta = peak_tab[peak_tab["Ruta"] == ruta_seleccionada].iloc[0]
-        venta_mxn = fila_ruta["Venta MXN"]
-        venta_usd = fila_ruta["Venta USD"]
+        fila_ruta = peak_tab[peak_tab['Ruta'] == ruta_seleccionada].iloc[0]
 
-        st.success(f"Resultado para la ruta seleccionada: **{ruta_seleccionada}**")
-        st.markdown(f"**• MXN:** ${venta_mxn:,.2f}")
-        st.markdown(f"**• USD:** ${venta_usd:,.2f}")
+        try:
+            venta_mxn = fila_ruta["MXN"]
+            venta_usd = fila_ruta["USD"]
+            st.success(f"Tarifa para la ruta seleccionada:")
+            st.markdown(f"- **MXN:** ${venta_mxn:,.2f}")
+            st.markdown(f"- **USD:** ${venta_usd:,.2f}")
+        except KeyError as e:
+            st.error(f"No se encontró alguna de las columnas necesarias: {e}")
 else:
     st.warning("No se encontró una columna llamada 'Ruta' en PEAK_TAB.")
