@@ -84,7 +84,7 @@ if st.button("Calcular"):
         venta_ext_usd = fila_ext['Venta USD']
 
         st.markdown(f"""<div class='resaltado'>
-        <h3>▶ Venta por Km (Extendida)</h3>
+        <h3>▶ Tabulador Por Rango de Km</h3>
         <ul>
             <li><b>MXN:</b> ${venta_ext_mxn:,.2f}</li>
             <li><b>USD:</b> ${venta_ext_usd:,.2f}</li>
