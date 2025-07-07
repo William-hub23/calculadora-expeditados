@@ -1,72 +1,82 @@
 
 import streamlit as st
 import pandas as pd
+from PIL import Image
 
-st.set_page_config(page_title="Calculadora de Venta de Viajes Expeditados", layout="centered")
-
-st.image("https://trayecto.app/wp-content/uploads/2023/09/trayecto-header-1024x576.jpg", use_container_width=True)
+# Cargar el banner
+banner = Image.open("banner.png")
+st.image(banner, use_column_width=True)
 
 st.title("Calculadora de Venta de Viajes Expeditados")
 
-# Cargar datos
-@st.cache_data
-def cargar_datos():
-    xls = pd.ExcelFile("CAT_TAB.xlsx")
-    ala = xls.parse("ALA_TAB")
-    peak = xls.parse("PEAK_TAB")
-    venta_ext = xls.parse("VENTAEXT_TAB")
-    return ala, peak, venta_ext
+# Cargar los datos desde el archivo Excel
+archivo = "CAT_TAB.xlsx"
+ala_df = pd.read_excel(archivo, sheet_name="ALA_TAB")
+peak_df = pd.read_excel(archivo, sheet_name="PEAK_TAB")
+venta_ext_df = pd.read_excel(archivo, sheet_name="VENTAEXT_TAB")
 
-ala_tab, peak_tab, venta_ext = cargar_datos()
+# Convertir KM a número en venta_ext_df
+venta_ext_df["KM"] = pd.to_numeric(venta_ext_df["KM"], errors="coerce")
 
-# Limpiar columnas de VENTAEXT_TAB
-venta_ext.columns = venta_ext.columns.str.strip()
-venta_ext['KM'] = venta_ext['KM'].astype(float)
+# Entrada del usuario
+km = st.number_input("Ingresa los kilómetros del viaje", min_value=1.0, value=1.0, step=1.0)
 
-# Sección de kilómetros
-st.subheader("Ingresa los kilómetros del viaje")
-km = st.number_input(" ", min_value=1.0, step=1.0)
-
-if st.button("Calcular"):
-    st.success(f"Resultado para {km:.2f} KM")
-
-    # Tarifa extendida
-    venta_ext['DIF'] = (venta_ext['KM'] - km).abs()
-    fila_extendida = venta_ext.loc[venta_ext['DIF'].idxmin()]
-    venta_mxn_ext = fila_extendida['Venta MXN']
-    venta_usd_ext = fila_extendida['Venta USD']
-
-    with st.container():
-        with st.expander("📈 Venta por Km (Extendida)", expanded=True):
-            st.markdown(f"- **MXN:** ${venta_mxn_ext:,.2f}")
-            st.markdown(f"- **USD:** ${venta_usd_ext:,.2f}")
-
-    # ALA_TAB
-    ala_tab['DIF'] = (ala_tab['KMs'] - km).abs()
-    fila_ala = ala_tab.loc[ala_tab['DIF'].idxmin()]
-    venta_mxn_ala = fila_ala['Venta total']
-    venta_usd_ala = fila_ala['BID (USD)']
-
-    with st.container():
-        with st.expander("📊 Tabulador ALA (Comparativa)", expanded=True):
-            st.markdown(f"- **MXN:** ${venta_mxn_ala:,.2f}")
-            st.markdown(f"- **USD:** ${venta_usd_ala:,.2f}")
-
-# Selector de ruta desde PEAK_TAB
-st.markdown("---")
-st.subheader("🧭 Selector de Ruta (Peak Tab)")
-
-peak_tab.columns = peak_tab.columns.str.strip()
-if "Ruta" in peak_tab.columns:
-    rutas_disponibles = peak_tab["Ruta"].dropna().unique()
+# Selector de Ruta desde PEAK_TAB
+st.markdown("### 🧭 Selector de Ruta (Peak Tab)")
+if "Ruta" in peak_df.columns:
+    rutas_disponibles = peak_df["Ruta"].dropna().unique().tolist()
     ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
 
-    if ruta_seleccionada:
-        fila_ruta = peak_tab[peak_tab["Ruta"] == ruta_seleccionada].iloc[0]
-        venta_mxn = fila_ruta.get("Venta MXN", "N/A")
-        venta_usd = fila_ruta.get("Venta USD", "N/A")
+    # Buscar la fila correspondiente
+    fila_ruta = peak_df[peak_df["Ruta"] == ruta_seleccionada].squeeze()
 
-        st.write(f"**Venta MXN:** ${venta_mxn:,.2f}" if pd.notna(venta_mxn) else "Venta MXN no disponible")
-        st.write(f"**Venta USD:** ${venta_usd:,.2f}" if pd.notna(venta_usd) else "Venta USD no disponible")
+    if not fila_ruta.empty:
+        venta_mxn = fila_ruta.get("Venta MXN", None)
+        venta_usd = fila_ruta.get("Venta USD", None)
+
+        st.subheader("🔍 Resultado por Ruta Seleccionada")
+        st.write(f"**Ruta:** {ruta_seleccionada}")
+        if pd.notna(venta_mxn):
+            st.write(f"**Venta MXN:** ${venta_mxn:,.2f}")
+        else:
+            st.write("**Venta MXN:** No disponible")
+
+        if pd.notna(venta_usd):
+            st.write(f"**Venta USD:** ${venta_usd:,.2f}")
+        else:
+            st.write("**Venta USD:** No disponible")
+    else:
+        st.warning("No se encontraron datos para la ruta seleccionada.")
 else:
     st.warning("No se encontró una columna llamada 'Ruta' en PEAK_TAB.")
+
+# Lógica de búsqueda por KM
+fila_km = venta_ext_df.iloc[(venta_ext_df["KM"] - km).abs().argsort()[:1]].squeeze()
+
+venta_ext_mxn = fila_km.get("Venta MXN", None)
+venta_ext_usd = fila_km.get("Venta USD", None)
+
+with st.expander("📊 Venta por Km (Extendida)", expanded=True):
+    if pd.notna(venta_ext_mxn):
+        st.write(f"**MXN:** ${venta_ext_mxn:,.2f}")
+    else:
+        st.write("**MXN:** No disponible")
+    if pd.notna(venta_ext_usd):
+        st.write(f"**USD:** ${venta_ext_usd:,.2f}")
+    else:
+        st.write("**USD:** No disponible")
+
+# Tabulador ALA
+fila_ala = ala_df.iloc[(ala_df["KM"] - km).abs().argsort()[:1]].squeeze()
+ala_mxn = fila_ala.get("Venta MXN", None)
+ala_usd = fila_ala.get("Venta USD", None)
+
+with st.expander("📉 Tabulador ALA (Comparativa)"):
+    if pd.notna(ala_mxn):
+        st.write(f"**MXN:** ${ala_mxn:,.2f}")
+    else:
+        st.write("**MXN:** No disponible")
+    if pd.notna(ala_usd):
+        st.write(f"**USD:** ${ala_usd:,.2f}")
+    else:
+        st.write("**USD:** No disponible")
