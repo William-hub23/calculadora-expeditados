@@ -116,7 +116,7 @@ if st.button("Calcular"):
         venta_ala_mxn = fila_ala['Venta total']
         venta_ala_usd = fila_ala['BID (USD)']
 
-        st.markdown("### ▶ Tabulador ALA")
+        st.markdown("### ▶ Tabulador ALA (Comparativa)")
         st.markdown(f"- MXN: ${venta_ala_mxn:,.2f}", unsafe_allow_html=True)
         st.markdown(f"- USD: ${venta_ala_usd:,.2f}", unsafe_allow_html=True)
 
