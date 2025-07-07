@@ -2,16 +2,13 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
-import streamlit as st
 
-
-# Personalizar favicon
+# Personalizar favicon y configuración
 st.set_page_config(
     page_title="Calculadora de Viajes Expeditados",
-    page_icon="banner_trayecto.png"
+    page_icon="banner_trayecto.png",
+    layout="centered"
 )
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
 
 # --- ESTILOS PERSONALIZADOS ---
 st.markdown("""
@@ -86,7 +83,7 @@ if st.button("Calcular"):
             fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
         venta_ala_mxn = fila_ala['Venta total']
         venta_ala_usd = fila_ala['BID (USD)']
-        
+
         # VENTA_TAB
         fila_venta = venta_tab[venta_tab['Rangos KM'] >= km].sort_values(by='Rangos KM').head(1)
         if not fila_venta.empty:
