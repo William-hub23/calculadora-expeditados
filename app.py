@@ -13,9 +13,11 @@ st.markdown("""
             background-color: #0B2341;
             color: #FB6500;
         }
-        .stTextInput > div > div > input {
+        .stTextInput > div > div > input,
+        input[type="text"],
+        input[type="password"] {
             background-color: #ffffff10;
-            color: white;
+            color: black !important;
         }
         .stButton button {
             background-color: #0B2341;
@@ -35,6 +37,7 @@ st.markdown("""
             background-color: #107144;
             padding: 1em;
             border-radius: 10px;
+            color: white;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -70,29 +73,9 @@ st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expe
 archivo_excel = 'CAT_TAB.xlsx'
 ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB')
-peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
 
 # Entrada de KM
 km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
-
-# Selector de rutas desde PEAK_TAB
-if 'Ruta' in peak_tab.columns:
-    st.markdown("### 🧭 Selector de Ruta (Peak Tab)")
-    ruta_seleccionada = st.selectbox("Selecciona una ruta:", peak_tab['Ruta'].dropna().unique())
-    fila_ruta = peak_tab[peak_tab['Ruta'] == ruta_seleccionada].iloc[0]
-    venta_mxn = fila_ruta.get("Venta MXN", None)
-    venta_usd = fila_ruta.get("Venta USD", None)
-
-    if pd.notna(venta_mxn) and pd.notna(venta_usd):
-        st.markdown(f"""<div class='resaltado'>
-        <h3>▶ Venta según Ruta Peak</h3>
-        <ul>
-            <li><b>MXN:</b> ${venta_mxn:,.2f}</li>
-            <li><b>USD:</b> ${venta_usd:,.2f}</li>
-        </ul>
-        </div>""", unsafe_allow_html=True)
-    else:
-        st.warning("No se encontró un valor válido para la venta de esta ruta.")
 
 if st.button("Calcular"):
     try:
