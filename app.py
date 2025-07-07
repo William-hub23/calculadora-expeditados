@@ -1,16 +1,17 @@
+
 import streamlit as st
 import pandas as pd
 from PIL import Image
 
-# Configuración de página
-st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
+# --- CONFIGURACIÓN DE LA PÁGINA ---
+st.set_page_config(page_title="Calculadora Expeditados", layout="centered")
 
-# Estilos personalizados
+# --- ESTILOS PERSONALIZADOS ---
 st.markdown("""
     <style>
         body {
             background-color: #0B2341;
-            color: #FB6500;
+            color: white;
         }
         .stTextInput > div > div > input {
             background-color: #ffffff10;
@@ -30,15 +31,16 @@ st.markdown("""
         .stAlert {
             background-color: #0B2341;
         }
-        .resaltado {
-            background-color: #107144;
+        .highlight-box {
+            background-color: #10733f;
             padding: 1em;
             border-radius: 10px;
+            color: white;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# Autenticación
+# --- AUTENTICACIÓN ---
 def login():
     with st.form("login"):
         st.image("banner.png", use_container_width=True)
@@ -59,39 +61,40 @@ if not st.session_state['authenticated']:
     login()
     st.stop()
 
-# Banner
+# --- BANNER ---
 st.image("banner.png", use_container_width=True)
 
-# Título
+# --- TÍTULO ---
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
-# Carga de datos
+# --- CARGA DE DATOS ---
 archivo_excel = 'CAT_TAB.xlsx'
 ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB')
+venta_tab = pd.read_excel(archivo_excel, sheet_name='VENTA_TAB')
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB')
+peak_tab = pd.read_excel(archivo_excel, sheet_name='PEAK_TAB')
 
-# Entrada de KM
+# --- INPUT DEL USUARIO ---
 km = st.number_input("Ingresa los kilómetros del viaje", min_value=1, step=1)
 
 if st.button("Calcular"):
     try:
         st.success(f"Resultado para {km:.2f} KM")
 
-        # VENTA POR KM (EXTENDIDA)
-        ventaext_tab['KM'] = ventaext_tab['KM'].astype(float)
+        # --- VENTAEXT_TAB (Primero y resaltado) ---
         fila_ext = ventaext_tab.iloc[(ventaext_tab['KM'] - km).abs().argsort()[:1]].iloc[0]
         venta_ext_mxn = fila_ext['Venta MXN']
         venta_ext_usd = fila_ext['Venta USD']
 
-        st.markdown(f"""<div class='resaltado'>
-        <h3>▶ Tabulador Por Rango de Km</h3>
-        <ul>
-            <li><b>MXN:</b> ${venta_ext_mxn:,.2f}</li>
-            <li><b>USD:</b> ${venta_ext_usd:,.2f}</li>
-        </ul>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="highlight-box">
+        <h4>▶ Venta por Km (Extendida)</h4>
+        • MXN: <b>${venta_ext_mxn:,.2f}</b><br>
+        • USD: <b>${venta_ext_usd:,.2f}</b>
+        </div>
+        """, unsafe_allow_html=True)
 
-        # TABULADOR ALA
+        # --- TABULADOR ALA ---
         if km in ala_tab['KMs'].values:
             fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
         else:
@@ -99,10 +102,29 @@ if st.button("Calcular"):
         venta_ala_mxn = fila_ala['Venta total']
         venta_ala_usd = fila_ala['BID (USD)']
 
-        st.markdown(f"""### ▶ Tabulador ALA (Comparativa)
-        - MXN: ${venta_ala_mxn:,.2f}
-        - USD: ${venta_ala_usd:,.2f}
+        st.markdown(f"""
+        ### ▶ Tabulador ALA (Comparativa)
+        • MXN: ${venta_ala_mxn:,.2f}  
+        • USD: ${venta_ala_usd:,.2f}
         """)
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
+
+# --- SELECTOR DE RUTA DESDE PEAK_TAB ---
+st.markdown("## 🧭 Selector de Ruta (Peak Tab)")
+
+if 'Ruta' in peak_tab.columns:
+    rutas = sorted(peak_tab['Ruta'].dropna().unique())
+    ruta_seleccionada = st.selectbox("Selecciona una ruta", rutas)
+
+    fila_ruta = peak_tab[peak_tab['Ruta'] == ruta_seleccionada].iloc[0]
+    venta_mxn_ruta = fila_ruta['MXN']
+    venta_usd_ruta = fila_ruta['USD']
+
+    st.success(f"""### Resultado para **{ruta_seleccionada}**
+- **MXN:** ${venta_mxn_ruta:,.2f}
+- **USD:** ${venta_usd_ruta:,.2f}
+""")
+else:
+    st.warning("No se encontró una columna llamada 'Ruta' en PEAK_TAB.")
