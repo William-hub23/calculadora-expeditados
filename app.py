@@ -81,7 +81,7 @@ if st.button("Calcular"):
             fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
         else:
             fila_ala = ala_tab.iloc[(ala_tab['KMs'] - km).abs().argsort()[:1]].iloc[0]
-        venta_ala_mxn = fila_ala['Venta total']
+        venta_ala_mxn = fila_ala['Costo']
         venta_ala_usd = fila_ala['BID (USD)']
 
         # VENTA_TAB
