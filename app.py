@@ -228,7 +228,7 @@ if submitted:
                 f"<li><b>Ing/Km USD:</b> ${km_block['ing_km_usd']:,.2f}</li>",
                 f"<li><b>MXN:</b> ${km_block['venta_mxn']:,.2f}</li>",
                 f"<li><b>USD:</b> ${km_block['venta_usd']:,.2f}</li>",
-                (f"<li><b>UAFIR:</b> {km_block['uafir']:,.0f}%</li>" if km_block.get("uafir") is not None else ""),
+                ((f"<li><b>UAFIR:</b> {km_block['uafir']:,.2f}%</li>" if km_block.get("uafir") is not None else ""),
             ]
         if km_block and mi_block:
             parts += ["<hr style='border:0;border-top:1px solid rgba(255,255,255,.35);margin:.6em 0;'>"]
@@ -239,7 +239,7 @@ if submitted:
                 f"<li><b>Ing/Km USD:</b> ${mi_block['ing_km_usd']:,.2f}</li>",
                 f"<li><b>MXN:</b> ${mi_block['venta_mxn']:,.2f}</li>",
                 f"<li><b>USD:</b> ${mi_block['venta_usd']:,.2f}</li>",
-                (f"<li><b>UAFIR:</b> {mi_block['uafir']:,.0f}%</li>" if mi_block.get("uafir") is not None else ""),
+                (f"<li><b>UAFIR:</b> {mi_block['uafir']:,.2f}%</li>" if mi_block.get("uafir") is not None else ""),
             ]
         parts += ["</ul>"]
         st.markdown(f"<div class='resaltado'>{''.join(parts)}</div>", unsafe_allow_html=True)
