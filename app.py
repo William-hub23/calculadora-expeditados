@@ -8,14 +8,38 @@ import math
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 st.markdown("""
     <style>
-        body { background-color: #0B2341; color: #FB6500; }
-        .stApp { background-color: #0B2341; }
-        .stTextInput input { background-color: white !important; color: black !important; }
-        .stButton button { background-color: #0B2341 !important; color: white !important; margin-right:10px; }
-        h1, h2, h3, h4, h5 { color: white; }
+        /* Fondo blanco y texto oscuro */
+        body { background-color: #ffffff; color: #0B2341; }
+        .stApp { background-color: #ffffff; }
+
+        /* Títulos en color corporativo */
+        h1, h2, h3, h4, h5 { color: #0B2341; }
+
+        /* Inputs: caret visible, borde suave */
+        .stTextInput input, .stNumberInput input, input[type="text"], input[type="number"] {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            caret-color: #000000 !important;
+            border: 1px solid #cfd8e3 !important;
+            border-radius: 6px !important;
+        }
+        ::selection { background: #e6f0ff; color: #000; }
+        input::selection { background: #e6f0ff; color: #000; }
+        textarea::selection { background: #e6f0ff; color: #000; }
+
+        /* Botones */
+        .stButton button {
+            background-color: #0B2341 !important;
+            color: #ffffff !important;
+            border: 1px solid #0B2341 !important;
+            margin-right: 10px;
+        }
+
+        /* Cajas de resultado (look original) */
         .resaltado { background-color: #107144; padding: 1em; border-radius: 10px; color: white; }
         .resultado-box { background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: white; font-weight: bold; }
         .warn-box { background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em; }
+
         .block-container { padding-top: 1rem; }
     </style>
 """, unsafe_allow_html=True)
@@ -38,7 +62,7 @@ ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB', engine="openpyxl")
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB', engine="openpyxl")
 
 def to_num(s): return pd.to_numeric(s, errors="coerce")
-for c in ["KMs","Venta total","BID (USD)"]:
+for c in ["KMs", "Venta total", "BID (USD)"]:
     ala_tab[c] = to_num(ala_tab[c])
 ala_tab = ala_tab.dropna(subset=["KMs","Venta total","BID (USD)"])
 
@@ -54,31 +78,6 @@ def fila_mas_cercana(df, col, objetivo):
     fila = df.iloc[idx]
     return fila, float(abs(fila[col] - objetivo))
 
-# =========================
-# ESTADO INICIAL
-# =========================
-if "km_txt" not in st.session_state:
-    st.session_state.km_txt = ""
-if "mi_txt" not in st.session_state:
-    st.session_state.mi_txt = ""
-
-# =========================
-# FORMULARIO DE ENTRADA
-# =========================
-st.markdown("### 🧭 Parámetros del viaje")
-with st.form("form_params", clear_on_submit=False):
-    c1, c2 = st.columns(2)
-    with c1:
-        km_txt = st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_txt, placeholder="Ej. 600", key="km_txt")
-    with c2:
-        mi_txt = st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_txt, placeholder="Ej. 373", key="mi_txt")
-
-    col_btn1, col_btn2 = st.columns([1,1])
-    with col_btn1:
-        submit = st.form_submit_button("Calcular")
-    with col_btn2:
-        reset = st.form_submit_button("Resetear")
-
 def parse_float(s):
     if s is None: return None
     s = s.strip().replace(",", "")
@@ -86,21 +85,42 @@ def parse_float(s):
     try:
         x = float(s)
         if math.isfinite(x) and x >= 0: return x
-    except: pass
+    except:
+        pass
     return None
 
 # =========================
-# BOTÓN DE RESET
+# ESTADO INICIAL
 # =========================
-if reset:
-    st.session_state.km_txt = ""
-    st.session_state.mi_txt = ""
-    st.experimental_rerun()
+st.session_state.setdefault("km_txt", "")
+st.session_state.setdefault("mi_txt", "")
+
+# =========================
+# FORMULARIO (Enter para calcular)
+# =========================
+st.markdown("### Ingresar Parámetros Del Viaje")
+
+with st.form("form_params", clear_on_submit=False):
+    c1, c2 = st.columns(2)
+    with c1:
+        st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_txt,
+                      placeholder="Ej. 600", key="km_txt")
+    with c2:
+        st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_txt,
+                      placeholder="Ej. 373", key="mi_txt")
+    submitted = st.form_submit_button("Calcular", use_container_width=False)
+
+# Botón Resetear FUERA del form (evita el error de Streamlit al modificar estado de widgets en el mismo submit)
+if st.button("Resetear", key="reset_btn"):
+    for k in ("km_txt", "mi_txt"):
+        if k in st.session_state:
+            st.session_state[k] = ""
+    st.rerun()
 
 # =========================
 # CÁLCULO
 # =========================
-if submit:
+if submitted:
     try:
         km = parse_float(st.session_state.km_txt)
         mi = parse_float(st.session_state.mi_txt)
@@ -140,7 +160,6 @@ if submit:
                 diff=diff_mi
             )
 
-        # Caja verde (igual look)
         parts = ["<h3>▶ Tabulador Por Rango de Km</h3><ul>"]
         if km_block:
             parts += [
@@ -163,6 +182,11 @@ if submit:
         parts += ["</ul>"]
         st.markdown(f"<div class='resaltado'>{''.join(parts)}</div>", unsafe_allow_html=True)
 
+        if km_block and km_block["diff"] > 0:
+            st.markdown(f"<div class='warn-box'>Se usó el KM más cercano: {km_block['km_ref']:,.0f}.</div>", unsafe_allow_html=True)
+        if mi_block and mi_block["diff"] > 0:
+            st.markdown(f"<div class='warn-box'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
+
         # ------- Tabulador ALA (Comparativa) -------
         if km is not None and km > 0:
             fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
@@ -174,8 +198,10 @@ if submit:
 - MXN: ${venta_ala_mxn:,.2f}
 - USD: ${venta_ala_usd:,.2f}
 """)
+            if diff_ala > 0:
+                st.markdown(f"<div class='warn-box'>Se usó el KM más cercano en ALA: {km_ref_ala:,.0f}.</div>", unsafe_allow_html=True)
 
-        # ------- Resumen final -------
+        # ------- Resumen final (opcional) -------
         mostrar_tabla = st.checkbox("Mostrar resumen final (tabla)", value=False)
         if mostrar_tabla:
             filas = []
@@ -217,5 +243,3 @@ if submit:
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
-
-
