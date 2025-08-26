@@ -8,6 +8,11 @@ import math
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 st.markdown("""
     <style>
+        /* Ocultar barra superior de Streamlit */
+        header[data-testid="stHeader"] {display: none;}
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+
         body, .stApp { background-color: #ffffff; color: #0B2341; }
         h1, h2, h3, h4, h5, label { color: #0B2341 !important; font-weight: 600; }
 
@@ -40,7 +45,7 @@ st.markdown("""
             background-color: #107144;
             padding: 1em; border-radius: 10px;
         }
-        .resaltado h3 { color: #ffffff !important; } /* Forzar blanco en título */
+        .resaltado h3 { color: #ffffff !important; }
         .resaltado li { color: #ffffff !important; }
 
         .resultado-box {
@@ -69,7 +74,7 @@ st.markdown("""
 # LOGIN
 # =========================
 def login():
-    st.image("banner.png", use_container_width=True)
+    st.image("banner.png", use_container_width=True)  # Banner completo también en login
     st.subheader("🔒 Acceso restringido")
     username = st.text_input("Usuario")
     password = st.text_input("Contraseña", type="password")
@@ -89,10 +94,7 @@ if not st.session_state['authenticated']:
 # =========================
 # BANNER + TÍTULO
 # =========================
-st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
-st.image("banner.png", use_container_width=True)
-st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
-
+st.image("banner.png", use_container_width=True)  # Banner completo en la app principal
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
 # =========================
@@ -196,7 +198,7 @@ if submitted:
                 diff=diff_mi
             )
 
-        # Caja verde (con título blanco ahora)
+        # Caja verde
         parts = ["<h3>▶ Tabulador Por Rango de Km</h3><ul>"]
         if km_block:
             parts += [
