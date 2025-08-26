@@ -10,9 +10,9 @@ st.markdown("""
     <style>
         /* Fondo blanco y texto principal */
         body, .stApp { background-color: #ffffff; color: #0B2341; }
-        h1, h2, h3, h4, h5 { color: #0B2341; }
+        h1, h2, h3, h4, h5, label { color: #0B2341 !important; font-weight: 600; }
 
-        /* Inputs: caret visible, bordes suaves, texto oscuro */
+        /* Inputs */
         .stTextInput input, input[type="text"], input[type="number"] {
             background-color: #ffffff !important;
             color: #000000 !important;
@@ -20,38 +20,39 @@ st.markdown("""
             border: 1px solid #cfd8e3 !important;
             border-radius: 6px !important;
         }
+
+        /* Placeholders visibles en gris oscuro */
+        ::placeholder {
+            color: #0B2341 !important;
+            opacity: 0.7 !important;
+        }
+
+        /* Selección de texto */
         ::selection { background: #e6f0ff; color: #000; }
         input::selection, textarea::selection { background: #e6f0ff; color: #000; }
 
-        /* Botones: sin transparencia en hover/active/focus */
+        /* Botones (Calcular y Resetear iguales) */
+        div.stButton > button,
+        div.stFormSubmitButton > button,
         .stButton button,
-        .stButton button:hover,
-        .stButton button:active,
-        .stButton button:focus {
+        .stForm button {
             background-color: #0B2341 !important;
             color: #ffffff !important;
             border: 1px solid #0B2341 !important;
+            border-radius: 6px !important;
             opacity: 1 !important;
             box-shadow: none !important;
-            filter: none !important;
+        }
+        div.stButton > button:hover,
+        div.stFormSubmitButton > button:hover {
+            background-color: #13315c !important;
         }
 
-        /* Cajas con look original */
-        .resaltado {
-            background-color: #107144; padding: 1em; border-radius: 10px; color: #ffffff;
-        }
-        .resultado-box {
-            background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: #ffffff; font-weight: bold;
-        }
-        .warn-box {
-            background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em;
-        }
-
-        /* Caja especial para ALA */
-        .ala-box {
-            background-color: #0B2341; color: #ffffff;
-            padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em;
-        }
+        /* Cajas */
+        .resaltado { background-color: #107144; padding: 1em; border-radius: 10px; color: #ffffff; }
+        .resultado-box { background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: #ffffff; font-weight: bold; }
+        .warn-box { background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em; }
+        .ala-box { background-color: #0B2341; color: #ffffff; padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em; }
         .ala-box h3, .ala-box li, .ala-box p { color: #ffffff !important; }
 
         .block-container { padding-top: 1rem; }
@@ -104,15 +105,13 @@ def parse_float(s):
     return None
 
 # =========================
-# ESTADO INICIAL (usar claves de widget separadas)
+# ESTADO INICIAL
 # =========================
-# Usamos claves de widget 'km_field' y 'mi_field'. El reset elimina estas claves y hace rerun
-# para evitar el StreamlitAPIException.
 st.session_state.setdefault("km_field", "")
 st.session_state.setdefault("mi_field", "")
 
 # =========================
-# FORMULARIO (Enter para calcular)
+# FORMULARIO
 # =========================
 st.markdown("### Ingresar Parámetros Del Viaje")
 
@@ -126,9 +125,8 @@ with st.form("form_params", clear_on_submit=False):
                       placeholder="Ej. 373", key="mi_field")
     submitted = st.form_submit_button("Calcular")
 
-# Botón Resetear FUERA del form (sin transparencia y sin error)
+# Botón Resetear fuera del form
 if st.button("Resetear", key="reset_btn"):
-    # Eliminamos las entradas de los widgets y recargamos
     for k in ("km_field", "mi_field"):
         if k in st.session_state:
             del st.session_state[k]
@@ -142,7 +140,7 @@ if submitted:
         km = parse_float(st.session_state.get("km_field", ""))
         mi = parse_float(st.session_state.get("mi_field", ""))
 
-        # Autoconversión si falta uno
+        # Autoconversión
         if km is not None and mi is None:
             mi = km / 1.60934
         elif mi is not None and km is None:
@@ -204,7 +202,7 @@ if submitted:
         if mi_block and mi_block["diff"] > 0:
             st.markdown(f"<div class='warn-box'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
 
-        # ------- Tabulador ALA (Comparativa) en recuadro oscuro con letras blancas -------
+        # ------- Tabulador ALA (Comparativa) -------
         if km is not None and km > 0:
             fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
             venta_ala_mxn = float(fila_ala['Venta total'])
