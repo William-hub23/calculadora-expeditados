@@ -6,7 +6,7 @@ import math
 # CONFIG & ESTILOS
 # =========================
 st.set_page_config(
-    page_title="Calculadora de Viajes Expeditados",
+    page_title="Calculadora ALA",
     page_icon="banner_trayecto.png", 
     layout="centered"
 )
