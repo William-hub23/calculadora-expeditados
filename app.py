@@ -5,7 +5,11 @@ import math
 # =========================
 # CONFIG & ESTILOS
 # =========================
-st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
+st.set_page_config(
+    page_title="Calculadora de Viajes Expeditados",
+    page_icon="banner.png", 
+    layout="centered"
+)
 st.markdown("""
     <style>
         /* Ocultar barra superior de Streamlit */
