@@ -8,11 +8,9 @@ import math
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 st.markdown("""
     <style>
-        /* Fondo blanco y texto principal */
         body, .stApp { background-color: #ffffff; color: #0B2341; }
         h1, h2, h3, h4, h5, label { color: #0B2341 !important; font-weight: 600; }
 
-        /* Inputs */
         .stTextInput input, input[type="text"], input[type="number"] {
             background-color: #ffffff !important;
             color: #000000 !important;
@@ -20,15 +18,10 @@ st.markdown("""
             border: 1px solid #cfd8e3 !important;
             border-radius: 6px !important;
         }
-
-        /* Placeholders visibles en gris oscuro */
         ::placeholder { color: #0B2341 !important; opacity: 0.7 !important; }
-
-        /* Selección de texto */
         ::selection { background: #e6f0ff; color: #000; }
         input::selection, textarea::selection { background: #e6f0ff; color: #000; }
 
-        /* Botones (Calcular y Resetear iguales) */
         div.stButton > button,
         div.stFormSubmitButton > button,
         .stButton button,
@@ -43,24 +36,24 @@ st.markdown("""
         div.stButton > button:hover,
         div.stFormSubmitButton > button:hover { background-color: #13315c !important; }
 
-        /* Cajas */
         .resaltado {
             background-color: #107144;
-            padding: 1em; border-radius: 10px; color: #ffffff;
+            padding: 1em; border-radius: 10px;
         }
+        .resaltado h3 { color: #ffffff !important; } /* Forzar blanco en título */
+        .resaltado li { color: #ffffff !important; }
+
         .resultado-box {
-            background-color: #0B2341; /* ahora mismo azul oscuro */
+            background-color: #0B2341;
             padding: 0.7em; border-radius: 6px; margin-bottom: 1em;
             color: #ffffff; font-weight: bold;
         }
 
-        /* Avisos azules */
         .info-blue {
             background-color: #0B2341; color: #ffffff;
             padding: 0.6em 0.8em; border-radius: 8px; margin-top:.6em;
         }
 
-        /* Caja especial para ALA */
         .ala-box {
             background-color: #0B2341; color: #ffffff;
             padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em;
@@ -68,15 +61,36 @@ st.markdown("""
         .ala-box h3, .ala-box li, .ala-box p { color: #ffffff !important; }
 
         .block-container { padding-top: 1rem; }
-        .banner-space { margin-bottom: 12px; } /* espacio bajo el banner */
+        .banner-space { margin-bottom: 12px; }
     </style>
 """, unsafe_allow_html=True)
+
+# =========================
+# LOGIN
+# =========================
+def login():
+    st.image("banner.png", use_container_width=True)
+    st.subheader("🔒 Acceso restringido")
+    username = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
+        if username == "admin" and password == "admin":
+            st.session_state['authenticated'] = True
+        else:
+            st.error("Credenciales incorrectas")
+
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+
+if not st.session_state['authenticated']:
+    login()
+    st.stop()
 
 # =========================
 # BANNER + TÍTULO
 # =========================
 st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
-st.image("banner.png", use_container_width=True)  # Banner restaurado
+st.image("banner.png", use_container_width=True)
 st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
@@ -136,7 +150,6 @@ with st.form("form_params", clear_on_submit=False):
                       value=st.session_state.mi_field, placeholder="Ej. 373", key="mi_field")
     submitted = st.form_submit_button("Calcular")
 
-# Botón Resetear FUERA del form
 if st.button("Resetear", key="reset_btn"):
     for k in ("km_field", "mi_field"):
         if k in st.session_state: del st.session_state[k]
@@ -150,7 +163,6 @@ if submitted:
         km = parse_float(st.session_state.get("km_field", ""))
         mi = parse_float(st.session_state.get("mi_field", ""))
 
-        # Autoconversión si falta uno
         if km is not None and mi is None:
             mi = km / 1.60934
         elif mi is not None and km is None:
@@ -162,7 +174,6 @@ if submitted:
 
         st.markdown(f"<div class='resultado-box'>Resultado</div>", unsafe_allow_html=True)
 
-        # ------- Tabulador por Rango (VENTAEXT) -------
         km_block = mi_block = None
         if km is not None and km > 0:
             fila_ext_km, diff_km = fila_mas_cercana(ventaext_tab, "KM", km)
@@ -185,7 +196,7 @@ if submitted:
                 diff=diff_mi
             )
 
-        # Caja verde
+        # Caja verde (con título blanco ahora)
         parts = ["<h3>▶ Tabulador Por Rango de Km</h3><ul>"]
         if km_block:
             parts += [
@@ -214,7 +225,7 @@ if submitted:
         if mi_block and mi_block["diff"] > 0:
             st.markdown(f"<div class='info-blue'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
 
-        # ------- Tabulador ALA (Comparativa) -------
+        # Tabulador ALA
         if km is not None and km > 0:
             fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
             venta_ala_mxn = float(fila_ala['Venta total'])
@@ -235,46 +246,7 @@ if submitted:
             if diff_ala > 0:
                 st.markdown(f"<div class='info-blue'>Se usó el KM más cercano en ALA: {km_ref_ala:,.0f}.</div>", unsafe_allow_html=True)
 
-        # ------- Resumen final (opcional) -------
-        mostrar_tabla = st.checkbox("Mostrar resumen final (tabla)", value=False)
-        if mostrar_tabla:
-            filas = []
-            if km_block:
-                filas.append({
-                    "Modo": "VENTAEXT - KM",
-                    "Referencia": km_block["km_ref"],
-                    "Ing/Km MXN": km_block["ing_km_mxn"],
-                    "Ing/Km USD": km_block["ing_km_usd"],
-                    "Venta MXN": km_block["venta_mxn"],
-                    "Venta USD": km_block["venta_usd"]
-                })
-            if mi_block:
-                filas.append({
-                    "Modo": "VENTAEXT - Millas",
-                    "Referencia": mi_block["mi_ref"],
-                    "Ing/Km MXN": mi_block["ing_km_mxn"],
-                    "Ing/Km USD": mi_block["ing_km_usd"],
-                    "Venta MXN": mi_block["venta_mxn"],
-                    "Venta USD": mi_block["venta_usd"]
-                })
-            if km is not None and km > 0:
-                filas.append({
-                    "Modo": "ALA_TAB",
-                    "Referencia": km_ref_ala,
-                    "Ing/Km MXN": None,
-                    "Ing/Km USD": None,
-                    "Venta MXN": venta_ala_mxn,
-                    "Venta USD": venta_ala_usd
-                })
-            df = pd.DataFrame(filas)
-            st.dataframe(df.style.format({
-                "Referencia": "{:,.0f}",
-                "Ing/Km MXN": (lambda x: f"${x:,.2f}" if pd.notnull(x) else "-"),
-                "Ing/Km USD": (lambda x: f"${x:,.2f}" if pd.notnull(x) else "-"),
-                "Venta MXN": "${:,.2f}",
-                "Venta USD": "${:,.2f}",
-            }), use_container_width=True)
-
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
+
 
