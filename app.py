@@ -22,10 +22,7 @@ st.markdown("""
         }
 
         /* Placeholders visibles en gris oscuro */
-        ::placeholder {
-            color: #0B2341 !important;
-            opacity: 0.7 !important;
-        }
+        ::placeholder { color: #0B2341 !important; opacity: 0.7 !important; }
 
         /* Selección de texto */
         ::selection { background: #e6f0ff; color: #000; }
@@ -44,28 +41,43 @@ st.markdown("""
             box-shadow: none !important;
         }
         div.stButton > button:hover,
-        div.stFormSubmitButton > button:hover {
-            background-color: #13315c !important;
-        }
+        div.stFormSubmitButton > button:hover { background-color: #13315c !important; }
 
         /* Cajas */
-        .resaltado { background-color: #107144; padding: 1em; border-radius: 10px; color: #ffffff; }
-        .resultado-box { background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: #ffffff; font-weight: bold; }
-        .warn-box { background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em; }
-        .ala-box { background-color: #0B2341; color: #ffffff; padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em; }
+        .resaltado {
+            background-color: #107144;
+            padding: 1em; border-radius: 10px; color: #ffffff;
+        }
+        .resultado-box {
+            background-color: #0B2341; /* ahora mismo azul oscuro */
+            padding: 0.7em; border-radius: 6px; margin-bottom: 1em;
+            color: #ffffff; font-weight: bold;
+        }
+
+        /* Avisos azules */
+        .info-blue {
+            background-color: #0B2341; color: #ffffff;
+            padding: 0.6em 0.8em; border-radius: 8px; margin-top:.6em;
+        }
+
+        /* Caja especial para ALA */
+        .ala-box {
+            background-color: #0B2341; color: #ffffff;
+            padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em;
+        }
         .ala-box h3, .ala-box li, .ala-box p { color: #ffffff !important; }
 
         .block-container { padding-top: 1rem; }
+        .banner-space { margin-bottom: 12px; } /* espacio bajo el banner */
     </style>
 """, unsafe_allow_html=True)
 
 # =========================
 # BANNER + TÍTULO
 # =========================
-try:
-    st.image("banner.png", use_container_width=True)
-except Exception:
-    st.markdown("<h2 style='text-align:center;'>ALA TRANSPORTES</h2>", unsafe_allow_html=True)
+st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
+st.image("banner.png", use_container_width=True)  # Banner restaurado
+st.markdown('<div class="banner-space"></div>', unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
@@ -100,8 +112,7 @@ def parse_float(s):
     try:
         x = float(s)
         if math.isfinite(x) and x >= 0: return x
-    except:
-        pass
+    except: pass
     return None
 
 # =========================
@@ -118,18 +129,17 @@ st.markdown("### Ingresar Parámetros Del Viaje")
 with st.form("form_params", clear_on_submit=False):
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_field,
-                      placeholder="Ej. 600", key="km_field")
+        st.text_input("Ingresa los kilómetros del viaje",
+                      value=st.session_state.km_field, placeholder="Ej. 600", key="km_field")
     with c2:
-        st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_field,
-                      placeholder="Ej. 373", key="mi_field")
+        st.text_input("Ingresa las millas del viaje",
+                      value=st.session_state.mi_field, placeholder="Ej. 373", key="mi_field")
     submitted = st.form_submit_button("Calcular")
 
-# Botón Resetear fuera del form
+# Botón Resetear FUERA del form
 if st.button("Resetear", key="reset_btn"):
     for k in ("km_field", "mi_field"):
-        if k in st.session_state:
-            del st.session_state[k]
+        if k in st.session_state: del st.session_state[k]
     st.rerun()
 
 # =========================
@@ -140,7 +150,7 @@ if submitted:
         km = parse_float(st.session_state.get("km_field", ""))
         mi = parse_float(st.session_state.get("mi_field", ""))
 
-        # Autoconversión
+        # Autoconversión si falta uno
         if km is not None and mi is None:
             mi = km / 1.60934
         elif mi is not None and km is None:
@@ -175,6 +185,7 @@ if submitted:
                 diff=diff_mi
             )
 
+        # Caja verde
         parts = ["<h3>▶ Tabulador Por Rango de Km</h3><ul>"]
         if km_block:
             parts += [
@@ -197,10 +208,11 @@ if submitted:
         parts += ["</ul>"]
         st.markdown(f"<div class='resaltado'>{''.join(parts)}</div>", unsafe_allow_html=True)
 
+        # Avisos azules
         if km_block and km_block["diff"] > 0:
-            st.markdown(f"<div class='warn-box'>Se usó el KM más cercano: {km_block['km_ref']:,.0f}.</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='info-blue'>Se usó el KM más cercano: {km_block['km_ref']:,.0f}.</div>", unsafe_allow_html=True)
         if mi_block and mi_block["diff"] > 0:
-            st.markdown(f"<div class='warn-box'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='info-blue'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
 
         # ------- Tabulador ALA (Comparativa) -------
         if km is not None and km > 0:
@@ -221,7 +233,7 @@ if submitted:
             st.markdown(ala_html, unsafe_allow_html=True)
 
             if diff_ala > 0:
-                st.markdown(f"<div class='warn-box'>Se usó el KM más cercano en ALA: {km_ref_ala:,.0f}.</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='info-blue'>Se usó el KM más cercano en ALA: {km_ref_ala:,.0f}.</div>", unsafe_allow_html=True)
 
         # ------- Resumen final (opcional) -------
         mostrar_tabla = st.checkbox("Mostrar resumen final (tabla)", value=False)
@@ -265,3 +277,4 @@ if submitted:
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
+
