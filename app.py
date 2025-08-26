@@ -8,15 +8,12 @@ import math
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 st.markdown("""
     <style>
-        /* Fondo blanco y texto oscuro */
-        body { background-color: #ffffff; color: #0B2341; }
-        .stApp { background-color: #ffffff; }
-
-        /* Títulos en color corporativo */
+        /* Fondo blanco y texto principal */
+        body, .stApp { background-color: #ffffff; color: #0B2341; }
         h1, h2, h3, h4, h5 { color: #0B2341; }
 
-        /* Inputs: caret visible, borde suave */
-        .stTextInput input, .stNumberInput input, input[type="text"], input[type="number"] {
+        /* Inputs: caret visible, bordes suaves, texto oscuro */
+        .stTextInput input, input[type="text"], input[type="number"] {
             background-color: #ffffff !important;
             color: #000000 !important;
             caret-color: #000000 !important;
@@ -24,21 +21,38 @@ st.markdown("""
             border-radius: 6px !important;
         }
         ::selection { background: #e6f0ff; color: #000; }
-        input::selection { background: #e6f0ff; color: #000; }
-        textarea::selection { background: #e6f0ff; color: #000; }
+        input::selection, textarea::selection { background: #e6f0ff; color: #000; }
 
-        /* Botones */
-        .stButton button {
+        /* Botones: sin transparencia en hover/active/focus */
+        .stButton button,
+        .stButton button:hover,
+        .stButton button:active,
+        .stButton button:focus {
             background-color: #0B2341 !important;
             color: #ffffff !important;
             border: 1px solid #0B2341 !important;
-            margin-right: 10px;
+            opacity: 1 !important;
+            box-shadow: none !important;
+            filter: none !important;
         }
 
-        /* Cajas de resultado (look original) */
-        .resaltado { background-color: #107144; padding: 1em; border-radius: 10px; color: white; }
-        .resultado-box { background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: white; font-weight: bold; }
-        .warn-box { background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em; }
+        /* Cajas con look original */
+        .resaltado {
+            background-color: #107144; padding: 1em; border-radius: 10px; color: #ffffff;
+        }
+        .resultado-box {
+            background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: #ffffff; font-weight: bold;
+        }
+        .warn-box {
+            background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em;
+        }
+
+        /* Caja especial para ALA */
+        .ala-box {
+            background-color: #0B2341; color: #ffffff;
+            padding: 0.9em 1.1em; border-radius: 8px; margin-top: 0.6em;
+        }
+        .ala-box h3, .ala-box li, .ala-box p { color: #ffffff !important; }
 
         .block-container { padding-top: 1rem; }
     </style>
@@ -62,7 +76,7 @@ ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB', engine="openpyxl")
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB', engine="openpyxl")
 
 def to_num(s): return pd.to_numeric(s, errors="coerce")
-for c in ["KMs", "Venta total", "BID (USD)"]:
+for c in ["KMs","Venta total","BID (USD)"]:
     ala_tab[c] = to_num(ala_tab[c])
 ala_tab = ala_tab.dropna(subset=["KMs","Venta total","BID (USD)"])
 
@@ -90,10 +104,12 @@ def parse_float(s):
     return None
 
 # =========================
-# ESTADO INICIAL
+# ESTADO INICIAL (usar claves de widget separadas)
 # =========================
-st.session_state.setdefault("km_txt", "")
-st.session_state.setdefault("mi_txt", "")
+# Usamos claves de widget 'km_field' y 'mi_field'. El reset elimina estas claves y hace rerun
+# para evitar el StreamlitAPIException.
+st.session_state.setdefault("km_field", "")
+st.session_state.setdefault("mi_field", "")
 
 # =========================
 # FORMULARIO (Enter para calcular)
@@ -103,18 +119,19 @@ st.markdown("### Ingresar Parámetros Del Viaje")
 with st.form("form_params", clear_on_submit=False):
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_txt,
-                      placeholder="Ej. 600", key="km_txt")
+        st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_field,
+                      placeholder="Ej. 600", key="km_field")
     with c2:
-        st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_txt,
-                      placeholder="Ej. 373", key="mi_txt")
-    submitted = st.form_submit_button("Calcular", use_container_width=False)
+        st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_field,
+                      placeholder="Ej. 373", key="mi_field")
+    submitted = st.form_submit_button("Calcular")
 
-# Botón Resetear FUERA del form (evita el error de Streamlit al modificar estado de widgets en el mismo submit)
+# Botón Resetear FUERA del form (sin transparencia y sin error)
 if st.button("Resetear", key="reset_btn"):
-    for k in ("km_txt", "mi_txt"):
+    # Eliminamos las entradas de los widgets y recargamos
+    for k in ("km_field", "mi_field"):
         if k in st.session_state:
-            st.session_state[k] = ""
+            del st.session_state[k]
     st.rerun()
 
 # =========================
@@ -122,10 +139,10 @@ if st.button("Resetear", key="reset_btn"):
 # =========================
 if submitted:
     try:
-        km = parse_float(st.session_state.km_txt)
-        mi = parse_float(st.session_state.mi_txt)
+        km = parse_float(st.session_state.get("km_field", ""))
+        mi = parse_float(st.session_state.get("mi_field", ""))
 
-        # Auto conversión sólo si falta uno
+        # Autoconversión si falta uno
         if km is not None and mi is None:
             mi = km / 1.60934
         elif mi is not None and km is None:
@@ -187,17 +204,24 @@ if submitted:
         if mi_block and mi_block["diff"] > 0:
             st.markdown(f"<div class='warn-box'>Se usó la milla más cercana: {mi_block['mi_ref']:,.0f}.</div>", unsafe_allow_html=True)
 
-        # ------- Tabulador ALA (Comparativa) -------
+        # ------- Tabulador ALA (Comparativa) en recuadro oscuro con letras blancas -------
         if km is not None and km > 0:
             fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
             venta_ala_mxn = float(fila_ala['Venta total'])
             venta_ala_usd = float(fila_ala['BID (USD)'])
             km_ref_ala    = float(fila_ala['KMs'])
 
-            st.markdown(f"""### ▶ Tabulador ALA (Comparativa)
-- MXN: ${venta_ala_mxn:,.2f}
-- USD: ${venta_ala_usd:,.2f}
-""")
+            ala_html = f"""
+            <div class="ala-box">
+                <h3>▶ Tabulador ALA (Comparativa)</h3>
+                <ul style="margin:0 0 0.2em 1em;">
+                    <li><b>MXN:</b> ${venta_ala_mxn:,.2f}</li>
+                    <li><b>USD:</b> ${venta_ala_usd:,.2f}</li>
+                </ul>
+            </div>
+            """
+            st.markdown(ala_html, unsafe_allow_html=True)
+
             if diff_ala > 0:
                 st.markdown(f"<div class='warn-box'>Se usó el KM más cercano en ALA: {km_ref_ala:,.0f}.</div>", unsafe_allow_html=True)
 
