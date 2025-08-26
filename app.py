@@ -1,57 +1,49 @@
 import streamlit as st
 import pandas as pd
+import math
 
 # =========================
-# CONFIG & ESTILOS (igual que antes)
+# CONFIG & ESTILOS
 # =========================
 st.set_page_config(page_title="Calculadora de Viajes Expeditados", layout="centered")
 st.markdown("""
     <style>
         body { background-color: #0B2341; color: #FB6500; }
         .stApp { background-color: #0B2341; }
-        .stTextInput > div > div > input,
-        .stNumberInput > div > input {
-            background-color: white; color: black;
-        }
-        .stButton button { background-color: #0B2341; color: white; }
+        .stTextInput input { background-color: white !important; color: black !important; }
+        .stButton button { background-color: #0B2341 !important; color: white !important; margin-right:10px; }
         h1, h2, h3, h4, h5 { color: white; }
-        .resaltado {
-            background-color: #107144; padding: 1em; border-radius: 10px; color: white;
-        }
-        .resultado-box {
-            background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: white; font-weight: bold;
-        }
-        .warn-box {
-            background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em;
-        }
+        .resaltado { background-color: #107144; padding: 1em; border-radius: 10px; color: white; }
+        .resultado-box { background-color: #0F2D3F; padding: 0.7em; border-radius: 6px; margin-bottom: 1em; color: white; font-weight: bold; }
+        .warn-box { background-color: #5a2e0e; padding: 0.6em; border-radius: 6px; color: #ffd7b3; margin-top:.5em; }
+        .block-container { padding-top: 1rem; }
     </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# BANNER + TÍTULO (igual)
+# BANNER + TÍTULO
 # =========================
 try:
     st.image("banner.png", use_container_width=True)
 except Exception:
-    pass
+    st.markdown("<h2 style='text-align:center;'>ALA TRANSPORTES</h2>", unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align: center;'>Calculadora de Venta de Viajes Expeditados</h1>", unsafe_allow_html=True)
 
 # =========================
-# CARGA DE DATOS (simple, igual)
+# CARGA DE DATOS
 # =========================
 archivo_excel = 'CAT_TAB.xlsx'
 ala_tab = pd.read_excel(archivo_excel, sheet_name='ALA_TAB', engine="openpyxl")
 ventaext_tab = pd.read_excel(archivo_excel, sheet_name='VENTAEXT_TAB', engine="openpyxl")
 
-# Validaciones mínimas
-def num(s): return pd.to_numeric(s, errors="coerce")
+def to_num(s): return pd.to_numeric(s, errors="coerce")
 for c in ["KMs","Venta total","BID (USD)"]:
-    ala_tab[c] = num(ala_tab[c])
+    ala_tab[c] = to_num(ala_tab[c])
 ala_tab = ala_tab.dropna(subset=["KMs","Venta total","BID (USD)"])
 
 for c in ["KM","Millas","Venta Por Km","Venta Por Km USD","Venta MXN","Venta USD"]:
-    ventaext_tab[c] = num(ventaext_tab[c])
+    ventaext_tab[c] = to_num(ventaext_tab[c])
 ventaext_tab = ventaext_tab.dropna(subset=["KM","Millas","Venta Por Km","Venta Por Km USD","Venta MXN","Venta USD"])
 
 def fila_mas_cercana(df, col, objetivo):
@@ -63,72 +55,117 @@ def fila_mas_cercana(df, col, objetivo):
     return fila, float(abs(fila[col] - objetivo))
 
 # =========================
-# ENTRADAS (dos columnas pero mismo estilo visual)
+# ESTADO INICIAL
 # =========================
-c1, c2 = st.columns(2)
-with c1:
-    km = st.number_input("Ingresa los kilómetros del viaje", min_value=0.0, step=1.0, value=0.0)
-with c2:
-    mi = st.number_input("Ingresa las millas del viaje", min_value=0.0, step=1.0, value=0.0)
+if "km_txt" not in st.session_state:
+    st.session_state.km_txt = ""
+if "mi_txt" not in st.session_state:
+    st.session_state.mi_txt = ""
 
-# Conversión automática (sin cambiar lo que sí escribas)
-if km > 0 and mi == 0:
-    mi = km / 1.60934
-elif mi > 0 and km == 0:
-    km = mi * 1.60934
+# =========================
+# FORMULARIO DE ENTRADA
+# =========================
+st.markdown("### 🧭 Parámetros del viaje")
+with st.form("form_params", clear_on_submit=False):
+    c1, c2 = st.columns(2)
+    with c1:
+        km_txt = st.text_input("Ingresa los kilómetros del viaje", value=st.session_state.km_txt, placeholder="Ej. 600", key="km_txt")
+    with c2:
+        mi_txt = st.text_input("Ingresa las millas del viaje", value=st.session_state.mi_txt, placeholder="Ej. 373", key="mi_txt")
 
-margen = st.number_input("Margen de aviso para 'valor más cercano' (km/millas)", min_value=0, value=10, step=1)
+    col_btn1, col_btn2 = st.columns([1,1])
+    with col_btn1:
+        submit = st.form_submit_button("Calcular")
+    with col_btn2:
+        reset = st.form_submit_button("Resetear")
 
-if st.button("Calcular"):
+def parse_float(s):
+    if s is None: return None
+    s = s.strip().replace(",", "")
+    if s == "": return None
     try:
+        x = float(s)
+        if math.isfinite(x) and x >= 0: return x
+    except: pass
+    return None
+
+# =========================
+# BOTÓN DE RESET
+# =========================
+if reset:
+    st.session_state.km_txt = ""
+    st.session_state.mi_txt = ""
+    st.experimental_rerun()
+
+# =========================
+# CÁLCULO
+# =========================
+if submit:
+    try:
+        km = parse_float(st.session_state.km_txt)
+        mi = parse_float(st.session_state.mi_txt)
+
+        # Auto conversión sólo si falta uno
+        if km is not None and mi is None:
+            mi = km / 1.60934
+        elif mi is not None and km is None:
+            km = mi * 1.60934
+
+        if km is None and mi is None:
+            st.warning("Ingresa **KM** o **Millas** para calcular.")
+            st.stop()
+
         st.markdown(f"<div class='resultado-box'>Resultado</div>", unsafe_allow_html=True)
 
-        # =========================
-        # TABULADOR POR RANGO (VENTAEXT) — MANTENIENDO LA CAJA VERDE
-        # =========================
-        # — Por KM (si hay km calculado)
-        if km > 0:
+        # ------- Tabulador por Rango (VENTAEXT) -------
+        km_block = mi_block = None
+        if km is not None and km > 0:
             fila_ext_km, diff_km = fila_mas_cercana(ventaext_tab, "KM", km)
-            venta_ext_mxn = float(fila_ext_km["Venta MXN"])
-            venta_ext_usd = float(fila_ext_km["Venta USD"])
-            ing_km_mxn   = float(fila_ext_km["Venta Por Km"])
-            ing_km_usd   = float(fila_ext_km["Venta Por Km USD"])
-            km_ref       = float(fila_ext_km["KM"])
-
-        # — Por Millas (si hay millas calculadas)
-        if mi > 0:
+            km_block = dict(
+                km_ref=float(fila_ext_km["KM"]),
+                ing_km_mxn=float(fila_ext_km["Venta Por Km"]),
+                ing_km_usd=float(fila_ext_km["Venta Por Km USD"]),
+                venta_mxn=float(fila_ext_km["Venta MXN"]),
+                venta_usd=float(fila_ext_km["Venta USD"]),
+                diff=diff_km
+            )
+        if mi is not None and mi > 0:
             fila_ext_mi, diff_mi = fila_mas_cercana(ventaext_tab, "Millas", mi)
-            venta_ext_mxn_mi = float(fila_ext_mi["Venta MXN"])
-            venta_ext_usd_mi = float(fila_ext_mi["Venta USD"])
-            ing_mi_mxn       = float(fila_ext_mi["Venta Por Km"])
-            ing_mi_usd       = float(fila_ext_mi["Venta Por Km USD"])
-            mi_ref           = float(fila_ext_mi["Millas"])
+            mi_block = dict(
+                mi_ref=float(fila_ext_mi["Millas"]),
+                ing_km_mxn=float(fila_ext_mi["Venta Por Km"]),
+                ing_km_usd=float(fila_ext_mi["Venta Por Km USD"]),
+                venta_mxn=float(fila_ext_mi["Venta MXN"]),
+                venta_usd=float(fila_ext_mi["Venta USD"]),
+                diff=diff_mi
+            )
 
-        # Caja verde única (como antes), mostrando ambos bloques internos
-        st.markdown(f"""<div class='resaltado'>
-            <h3>▶ Tabulador Por Rango de Km</h3>
-            <ul>
-                {"<li><b>KM de referencia:</b> {:,.0f}</li><li><b>Ing/Km MXN:</b> ${:,.2f}</li><li><b>Ing/Km USD:</b> ${:,.2f}</li><li><b>MXN:</b> ${:,.2f}</li><li><b>USD:</b> ${:,.2f}</li>".format(km_ref, ing_km_mxn, ing_km_usd, venta_ext_mxn, venta_ext_usd) if km > 0 else ""}
-                {"<hr style='border:0;border-top:1px solid rgba(255,255,255,.35);margin:.6em 0;'>" if (km>0 and mi>0) else ""}
-                {"<li><b>Millas de referencia:</b> {:,.0f}</li><li><b>Ing/Km MXN:</b> ${:,.2f}</li><li><b>Ing/Km USD:</b> ${:,.2f}</li><li><b>MXN:</b> ${:,.2f}</li><li><b>USD:</b> ${:,.2f}</li>".format(mi_ref, ing_mi_mxn, ing_mi_usd, venta_ext_mxn_mi, venta_ext_usd_mi) if mi > 0 else ""}
-            </ul>
-        </div>""", unsafe_allow_html=True)
+        # Caja verde (igual look)
+        parts = ["<h3>▶ Tabulador Por Rango de Km</h3><ul>"]
+        if km_block:
+            parts += [
+                f"<li><b>KM de referencia:</b> {km_block['km_ref']:,.0f}</li>",
+                f"<li><b>Ing/Km MXN:</b> ${km_block['ing_km_mxn']:,.2f}</li>",
+                f"<li><b>Ing/Km USD:</b> ${km_block['ing_km_usd']:,.2f}</li>",
+                f"<li><b>MXN:</b> ${km_block['venta_mxn']:,.2f}</li>",
+                f"<li><b>USD:</b> ${km_block['venta_usd']:,.2f}</li>",
+            ]
+        if km_block and mi_block:
+            parts += ["<hr style='border:0;border-top:1px solid rgba(255,255,255,.35);margin:.6em 0;'>"]
+        if mi_block:
+            parts += [
+                f"<li><b>Millas de referencia:</b> {mi_block['mi_ref']:,.0f}</li>",
+                f"<li><b>Ing/Km MXN:</b> ${mi_block['ing_km_mxn']:,.2f}</li>",
+                f"<li><b>Ing/Km USD:</b> ${mi_block['ing_km_usd']:,.2f}</li>",
+                f"<li><b>MXN:</b> ${mi_block['venta_mxn']:,.2f}</li>",
+                f"<li><b>USD:</b> ${mi_block['venta_usd']:,.2f}</li>",
+            ]
+        parts += ["</ul>"]
+        st.markdown(f"<div class='resaltado'>{''.join(parts)}</div>", unsafe_allow_html=True)
 
-        if km > 0 and diff_km > margen:
-            st.markdown(f"<div class='warn-box'>⚠️ No existe {km:,.0f} km exacto en VENTAEXT; se usó {km_ref:,.0f} (dif {diff_km:,.0f}).</div>", unsafe_allow_html=True)
-        if mi > 0 and diff_mi > margen:
-            st.markdown(f"<div class='warn-box'>⚠️ No existen {mi:,.0f} millas exactas en VENTAEXT; se usó {mi_ref:,.0f} (dif {diff_mi:,.0f}).</div>", unsafe_allow_html=True)
-
-        # =========================
-        # TABULADOR ALA (Comparativa) — MANTENIDO
-        # =========================
-        if km > 0:
-            if km in ala_tab['KMs'].values:
-                fila_ala = ala_tab[ala_tab['KMs'] == km].iloc[0]
-                diff_ala = 0.0
-            else:
-                fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
-
+        # ------- Tabulador ALA (Comparativa) -------
+        if km is not None and km > 0:
+            fila_ala, diff_ala = fila_mas_cercana(ala_tab, "KMs", km)
             venta_ala_mxn = float(fila_ala['Venta total'])
             venta_ala_usd = float(fila_ala['BID (USD)'])
             km_ref_ala    = float(fila_ala['KMs'])
@@ -137,34 +174,30 @@ if st.button("Calcular"):
 - MXN: ${venta_ala_mxn:,.2f}
 - USD: ${venta_ala_usd:,.2f}
 """)
-            if diff_ala > margen:
-                st.markdown(f"<div class='warn-box'>⚠️ No existe {km:,.0f} km exacto en ALA_TAB; se usó {km_ref_ala:,.0f} (dif {diff_ala:,.0f}).</div>", unsafe_allow_html=True)
 
-        # =========================
-        # (Opcional) Tabla resumen final (apagada por defecto para no cambiar el diseño)
-        # =========================
+        # ------- Resumen final -------
         mostrar_tabla = st.checkbox("Mostrar resumen final (tabla)", value=False)
         if mostrar_tabla:
             filas = []
-            if km > 0:
+            if km_block:
                 filas.append({
                     "Modo": "VENTAEXT - KM",
-                    "Referencia": km_ref,
-                    "Ing/Km MXN": ing_km_mxn,
-                    "Ing/Km USD": ing_km_usd,
-                    "Venta MXN": venta_ext_mxn,
-                    "Venta USD": venta_ext_usd
+                    "Referencia": km_block["km_ref"],
+                    "Ing/Km MXN": km_block["ing_km_mxn"],
+                    "Ing/Km USD": km_block["ing_km_usd"],
+                    "Venta MXN": km_block["venta_mxn"],
+                    "Venta USD": km_block["venta_usd"]
                 })
-            if mi > 0:
+            if mi_block:
                 filas.append({
                     "Modo": "VENTAEXT - Millas",
-                    "Referencia": mi_ref,
-                    "Ing/Km MXN": ing_mi_mxn,
-                    "Ing/Km USD": ing_mi_usd,
-                    "Venta MXN": venta_ext_mxn_mi,
-                    "Venta USD": venta_ext_usd_mi
+                    "Referencia": mi_block["mi_ref"],
+                    "Ing/Km MXN": mi_block["ing_km_mxn"],
+                    "Ing/Km USD": mi_block["ing_km_usd"],
+                    "Venta MXN": mi_block["venta_mxn"],
+                    "Venta USD": mi_block["venta_usd"]
                 })
-            if km > 0:
+            if km is not None and km > 0:
                 filas.append({
                     "Modo": "ALA_TAB",
                     "Referencia": km_ref_ala,
@@ -184,3 +217,5 @@ if st.button("Calcular"):
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
+
+
