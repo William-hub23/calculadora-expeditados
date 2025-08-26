@@ -7,7 +7,7 @@ import math
 # =========================
 st.set_page_config(
     page_title="Calculadora de Viajes Expeditados",
-    page_icon="banner.png", 
+    page_icon="banner_trayecto.png", 
     layout="centered"
 )
 st.markdown("""
